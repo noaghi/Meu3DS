@@ -56,11 +56,12 @@ package ufc.smd.meu3ds.data.network
 //}
 
 import ufc.smd.meu3ds.data.network.JogoModel
-import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Header
+import okhttp3.RequestBody
 
 interface IGDBApiService {
-    @GET("v4/games")
+    @POST("games")
 
     suspend fun buscarJogos(
         @Header("Client-ID") clientId: String,

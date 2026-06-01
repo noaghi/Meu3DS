@@ -1,38 +1,38 @@
 package ufc.smd.meu3ds
 
-import android.os.Bundle
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import ufc.smd.meu3ds.data.network.mLoad
-import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
+//import android.os.Bundle
+//import android.util.Log
+//import androidx.activity.ComponentActivity
+//import androidx.activity.compose.setContent
+//import androidx.activity.enableEdgeToEdge
+//import androidx.compose.foundation.layout.Column
+//import androidx.compose.foundation.layout.fillMaxSize
+//import androidx.compose.foundation.layout.fillMaxWidth
+//import androidx.compose.foundation.layout.padding
+//import androidx.compose.foundation.lazy.LazyColumn
+//import androidx.compose.foundation.lazy.items
+//import androidx.compose.material3.Button
+//import androidx.compose.material3.HorizontalDivider
+//import androidx.compose.material3.Scaffold
+//import androidx.compose.material3.Text
+//import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+//import androidx.compose.runtime.Composable
+//import androidx.compose.runtime.LaunchedEffect
+//import androidx.compose.runtime.getValue
+//import androidx.compose.runtime.mutableStateOf
+//import androidx.compose.runtime.remember
+//import androidx.compose.runtime.rememberCoroutineScope
+//import androidx.compose.runtime.setValue
+//import androidx.compose.ui.Alignment
+//import androidx.compose.ui.Modifier
+//import androidx.compose.ui.unit.dp
+//import kotlinx.coroutines.Dispatchers
+//import kotlinx.coroutines.launch
+//import kotlinx.coroutines.withContext
+//import org.json.JSONArray
+//import org.json.JSONObject
+//import ufc.smd.meu3ds.data.network.mLoad
+//import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
 
 //essa MainActivity inteira é somente para demonstrar a conexão por BufferedReader no dia da apresentação
 //class MainActivity : ComponentActivity() {
@@ -119,15 +119,126 @@ import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
 //    }
 //}
 
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import ufc.smd.meu3ds.data.network.IGDBApiService
+import ufc.smd.meu3ds.data.network.JogoModel
+import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            var jogos by remember { mutableStateOf(listOf<JogoModel>()) }
+            var carregando by remember { mutableStateOf(false) }
+
+            val coroutineScope = rememberCoroutineScope()
+
+            val retrofit = remember {
+                Retrofit.Builder()
+                    .baseUrl("https://api.igdb.com/v4/")
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+            }
+
+            val apiService = remember { retrofit.create(IGDBApiService::class.java) }
+
             Meu3DSTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        BotaoConsultaListaGeral {
+                            carregando = true
+                            jogos = emptyList()
+
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
+                                val meuToken = "Bearer k2ktyy51lk9vjm85hubtf6o6r9efhf"
+
+                                try {
+                                    val respostaApi = apiService.buscarJogos(meuClientId, meuToken)
+
+                                    withContext(Dispatchers.Main) {
+                                        jogos = respostaApi
+                                        carregando = false
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("erro", "Erro na requisição: ${e.message}")
+                                    withContext(Dispatchers.Main) {
+                                        carregando = false
+                                    }
+                                }
+                            }
+                        }
+
+                        if (carregando) {
+                            CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                            Text("Carregando com Retrofit...")
+                        } else if (jogos.isEmpty()) {
+                            Text("Nenhum dado. Toque no botão acima.")
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                items(jogos) { jogo ->
+                                    Text(
+                                        text = "Nome: ${jogo.name}\nID: ${jogo.id}\nDescrição: ${jogo.summary}",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp)
+                                    )
+                                    HorizontalDivider()
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun BotaoConsultaListaGeral( onClick: () -> Unit ) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+    ) {
+        Text("Buscar no IGDB com retrofit")
     }
 }
