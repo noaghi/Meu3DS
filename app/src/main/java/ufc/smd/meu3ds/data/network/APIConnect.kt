@@ -1,13 +1,13 @@
 package ufc.smd.meu3ds.data.network
 
-import android.util.Log
-import java.io.BufferedInputStream
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStream
-import java.net.MalformedURLException
-import java.net.URL
-import javax.net.ssl.HttpsURLConnection
+//import android.util.Log
+//import java.io.BufferedInputStream
+//import java.io.BufferedReader
+//import java.io.IOException
+//import java.io.InputStream
+//import java.net.MalformedURLException
+//import java.net.URL
+//import javax.net.ssl.HttpsURLConnection
 
 //método de conexão Java, usando BufferedReader
 //suspend fun mLoad(
@@ -55,3 +55,15 @@ import javax.net.ssl.HttpsURLConnection
 //    return null
 //}
 
+import ufc.smd.meu3ds.data.network.JogoModel
+import retrofit2.http.GET
+import retrofit2.http.Header
+
+interface IGDBApiService {
+    @GET("v4/games")
+
+    suspend fun buscarJogos(
+        @Header("Client-ID") clientId: String,
+        @Header("Authorization") authorization: String
+    ): List<JogoModel>
+}
