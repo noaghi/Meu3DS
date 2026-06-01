@@ -34,84 +34,98 @@ import org.json.JSONObject
 import ufc.smd.meu3ds.data.network.mLoad
 import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
 
+//essa MainActivity inteira é somente para demonstrar a conexão por BufferedReader no dia da apresentação
+//class MainActivity : ComponentActivity() {
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//        enableEdgeToEdge()
+//        setContent {
+//            var jogos by remember { mutableStateOf(listOf<String>()) }
+//            var carregando by remember { mutableStateOf(false) }
+//
+//            val coroutineScope = rememberCoroutineScope()
+//
+//            Meu3DSTheme {
+//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+//                    Column(
+//                        modifier = Modifier
+//                            .fillMaxSize()
+//                            .padding(innerPadding)
+//                            .padding(16.dp),
+//                        horizontalAlignment = Alignment.CenterHorizontally
+//                    ) {
+//                        Button(
+//                            onClick = {
+//                                carregando = true
+//                                jogos = emptyList()
+//
+//                                coroutineScope.launch(Dispatchers.IO) {
+//                                    val urlIGDB = "https://api.igdb.com/v4/games"
+//                                    val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
+//                                    val meuToken = "k2ktyy51lk9vjm85hubtf6o6r9efhf"
+//
+//                                    val retorno = mLoad(urlIGDB, meuClientId, meuToken)
+//                                    val texto = retorno?.readText() ?: "vazio"
+//
+//                                    try {
+//                                        val jsonArray = JSONArray(texto)
+//                                        val listaTemporaria = mutableListOf<String>()
+//
+//                                        for (i in 0 until jsonArray.length()) {
+//                                            val jsonObject = jsonArray.getJSONObject(i)
+//                                            val id = jsonObject.optInt("id")
+//
+//                                            listaTemporaria.add(id.toString())
+//                                        }
+//
+//                                        withContext(Dispatchers.Main) {
+//                                            jogos = listaTemporaria
+//                                            carregando = false
+//                                        }
+//
+//                                    } catch (e: Exception) {
+//                                        Log.v("PDM", "Erro ao processar JSON: ${e.message}")
+//                                        withContext(Dispatchers.Main) {
+//                                            jogos = listOf("Erro ao carregar dados.")
+//                                            carregando = false
+//                                        }
+//                                    }
+//                                }
+//
+//                            },
+//                            modifier = Modifier.padding(bottom = 16.dp)
+//                        ) {
+//                            Text(text = "Buscar IDs no IGDB")
+//                        }
+//                        if (carregando) {
+//                            Text("Carregando...")
+//                        } else if (jogos.isEmpty()) {
+//                            Text("Nenhum dado. Toque no botão acima.")
+//                        } else {
+//                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+//                                items(jogos) { jogo ->
+//                                    Text(
+//                                        text = jogo,
+//                                        modifier = Modifier.padding(innerPadding)
+//                                    )
+//                                    HorizontalDivider()
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var jogos by remember { mutableStateOf(listOf<String>()) }
-            var carregando by remember { mutableStateOf(false) }
-
-            val coroutineScope = rememberCoroutineScope()
-
             Meu3DSTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Button(
-                            onClick = {
-                                carregando = true
-                                jogos = emptyList()
-
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    val urlIGDB = "https://api.igdb.com/v4/games"
-                                    val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
-                                    val meuToken = "k2ktyy51lk9vjm85hubtf6o6r9efhf"
-
-                                    val retorno = mLoad(urlIGDB, meuClientId, meuToken)
-                                    val texto = retorno?.readText() ?: "vazio"
-
-                                    try {
-                                        val jsonArray = JSONArray(texto)
-                                        val listaTemporaria = mutableListOf<String>()
-
-                                        for (i in 0 until jsonArray.length()) {
-                                            val jsonObject = jsonArray.getJSONObject(i)
-                                            val id = jsonObject.optInt("id")
-
-                                            listaTemporaria.add(id.toString())
-                                        }
-
-                                        withContext(Dispatchers.Main) {
-                                            jogos = listaTemporaria
-                                            carregando = false
-                                        }
-
-                                    } catch (e: Exception) {
-                                        Log.v("PDM", "Erro ao processar JSON: ${e.message}")
-                                        withContext(Dispatchers.Main) {
-                                            jogos = listOf("Erro ao carregar dados.")
-                                            carregando = false
-                                        }
-                                    }
-                                }
-
-                            },
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        ) {
-                            Text(text = "Buscar IDs no IGDB")
-                        }
-                        if (carregando) {
-                            Text("Carregando...")
-                        } else if (jogos.isEmpty()) {
-                            Text("Nenhum dado. Toque no botão acima.")
-                        } else {
-                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                items(jogos) { jogo ->
-                                    Text(
-                                        text = jogo,
-                                        modifier = Modifier.padding(innerPadding)
-                                    )
-                                    HorizontalDivider()
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
