@@ -9,13 +9,25 @@ import java.net.MalformedURLException
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-suspend fun mLoad(string: String): BufferedReader? {
+suspend fun mLoad(
+    string: String,
+    clientId: String? = null,
+    token: String? = null
+): BufferedReader? {
     val url: URL = mStringToURL(string)!!
     val connection: HttpsURLConnection?
     try {
         connection = url.openConnection() as HttpsURLConnection
-        connection.requestMethod= "GET"
+        connection.requestMethod= "POST"
         connection.connectTimeout= 20000
+
+        if (clientId != null) {
+            connection.setRequestProperty("Client-ID", clientId)
+        }
+        if (token != null) {
+            connection.setRequestProperty("Authorization", "Bearer $token")
+        }
+
         connection.connect()
 
         Log.v("PDM", "Response Code: "+connection.responseCode)
