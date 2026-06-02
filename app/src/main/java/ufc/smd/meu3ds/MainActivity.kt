@@ -125,6 +125,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -143,6 +144,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -156,6 +158,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import ufc.smd.meu3ds.data.network.IGDBApiService
 import ufc.smd.meu3ds.data.network.JogoModel
 import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -192,7 +197,7 @@ class MainActivity : ComponentActivity() {
                             coroutineScope.launch(Dispatchers.IO) {
                                 val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
                                 val meuToken = "Bearer k2ktyy51lk9vjm85hubtf6o6r9efhf"
-                                val textoDoFiltro = "fields name, platforms; where platforms = 37;"
+                                val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37;"
                                 val mediaType = okhttp3.MediaType.parse("text/plain")
                                 val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
 
@@ -245,14 +250,27 @@ fun BotaoConsultaListaGeral( onClick: () -> Unit ) {
 }
 
 @Composable
-fun JogoCard(
-    jogo: JogoModel
-) {
+fun JogoCard(jogo: JogoModel) {
+    val dataFormatada = remember(jogo.data) {
+        if (jogo.data != null) {
+            val ms = jogo.data * 1000
+            val data = Date(ms)
+
+            val formatador = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
+            formatador.format(data)
+        } else {
+            "Sem data"
+        }
+    }
+
+    var expandido by rememberSaveable { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .animateContentSize(),
+            .animateContentSize()
+            .clickable { expandido = !expandido },
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -260,8 +278,11 @@ fun JogoCard(
         )
     ) {
         Column {
-            Text(text = jogo.name ?: "Sem título", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-            Text(jogo.summary ?: "Sem descrição")
+            Text(text = jogo.nome ?: "Sem título", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+            Text(dataFormatada)
+        }
+        if (expandido) {
+            Text(jogo.desc ?: "Sem descrição")
         }
     }
 }
