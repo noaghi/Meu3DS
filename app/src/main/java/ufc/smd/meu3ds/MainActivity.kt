@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
                             coroutineScope.launch(Dispatchers.IO) {
                                 val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
                                 val meuToken = "Bearer k2ktyy51lk9vjm85hubtf6o6r9efhf"
-                                val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37;"
+                                val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc;"
                                 val mediaType = okhttp3.MediaType.parse("text/plain")
                                 val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
 
@@ -277,12 +277,12 @@ fun JogoCard(jogo: JogoModel) {
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {
-        Column {
+        Column(modifier = Modifier.padding(8.dp)) {
             Text(text = jogo.nome ?: "Sem título", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
             Text(dataFormatada)
-        }
-        if (expandido) {
-            Text(jogo.desc ?: "Sem descrição")
+            if (expandido) {
+                Text(jogo.desc ?: "Sem descrição")
+            }
         }
     }
 }
