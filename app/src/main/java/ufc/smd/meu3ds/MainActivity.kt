@@ -124,16 +124,18 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -144,6 +146,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -195,6 +198,7 @@ class MainActivity : ComponentActivity() {
 
                                 try {
                                     val respostaApi = apiService.buscarJogos(meuClientId, meuToken, corpoRequisicao)
+                                    Log.v("respostaAPI", respostaApi.toString())
 
                                     withContext(Dispatchers.Main) {
                                         jogos = respostaApi
@@ -217,13 +221,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                                 items(jogos) { jogo ->
-                                    Text(
-                                        text = "Nome: ${jogo.name}\nID: ${jogo.id}\nDescrição: ${jogo.summary}",
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 12.dp)
-                                    )
-                                    HorizontalDivider()
+                                    JogoCard(jogo)
                                 }
                             }
                         }
@@ -243,5 +241,27 @@ fun BotaoConsultaListaGeral( onClick: () -> Unit ) {
             .padding(bottom = 16.dp)
     ) {
         Text("Buscar no IGDB com retrofit")
+    }
+}
+
+@Composable
+fun JogoCard(
+    jogo: JogoModel
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .animateContentSize(),
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    ) {
+        Column {
+            Text(text = jogo.name ?: "Sem título", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+            Text(jogo.summary ?: "Sem descrição")
+        }
     }
 }
