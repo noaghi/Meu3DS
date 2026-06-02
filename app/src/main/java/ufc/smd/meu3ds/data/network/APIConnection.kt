@@ -55,16 +55,17 @@ package ufc.smd.meu3ds.data.network
 //    return null
 //}
 
-import ufc.smd.meu3ds.data.network.JogoModel
+import okhttp3.RequestBody
 import retrofit2.http.POST
 import retrofit2.http.Header
-import okhttp3.RequestBody
+import retrofit2.http.Body
 
 interface IGDBApiService {
     @POST("games")
 
     suspend fun buscarJogos(
         @Header("Client-ID") clientId: String,
-        @Header("Authorization") authorization: String
+        @Header("Authorization") authorization: String,
+        @Body query: RequestBody
     ): List<JogoModel>
 }

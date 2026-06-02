@@ -189,9 +189,12 @@ class MainActivity : ComponentActivity() {
                             coroutineScope.launch(Dispatchers.IO) {
                                 val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
                                 val meuToken = "Bearer k2ktyy51lk9vjm85hubtf6o6r9efhf"
+                                val textoDoFiltro = "fields name, platforms; where platforms = 37;"
+                                val mediaType = okhttp3.MediaType.parse("text/plain")
+                                val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
 
                                 try {
-                                    val respostaApi = apiService.buscarJogos(meuClientId, meuToken)
+                                    val respostaApi = apiService.buscarJogos(meuClientId, meuToken, corpoRequisicao)
 
                                     withContext(Dispatchers.Main) {
                                         jogos = respostaApi
