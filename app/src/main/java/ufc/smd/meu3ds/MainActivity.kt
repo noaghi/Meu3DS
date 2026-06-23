@@ -199,6 +199,7 @@ class MainActivity : ComponentActivity() {
 //import java.util.Date
 //import java.util.Locale
 //
+////essa MainActivity é a definitiva
 //class MainActivity : ComponentActivity() {
 //    override fun onCreate(savedInstanceState: Bundle?) {
 //        super.onCreate(savedInstanceState)
