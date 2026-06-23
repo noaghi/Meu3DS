@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import ufc.smd.meu3ds.data.network.mLoad
 import ufc.smd.meu3ds.ui.theme.Meu3DSTheme
+import ufc.smd.meu3ds.data.network.JogoModel
 
 //essa MainActivity inteira é somente para demonstrar a conexão por BufferedReader no dia da apresentação
 class MainActivity : ComponentActivity() {
@@ -46,8 +48,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var idJogos by remember { mutableStateOf(listOf<String>()) }
-            var nomeJogos by remember { mutableStateOf(listOf<String>()) }
+            var listaJogos by remember { mutableStateOf(listOf<JogoModel>()) }
             var carregando by remember { mutableStateOf(false) }
 
             val coroutineScope = rememberCoroutineScope()
@@ -64,8 +65,6 @@ class MainActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 carregando = true
-                                idJogos = emptyList()
-                                nomeJogos = emptyList()
 
                                 coroutineScope.launch(Dispatchers.IO) {
                                     val urlIGDB = "https://api.igdb.com/v4/games"
@@ -75,32 +74,32 @@ class MainActivity : ComponentActivity() {
 
                                     val retorno = mLoad(urlIGDB, meuClientId, meuToken, body)
                                     val texto = retorno?.readText() ?: "vazio"
-                                    Log.v("o objeto inteiro é", texto)
+                                    Log.v("o JSON inteiro é", texto)
 
                                     try {
                                         val jsonArray = JSONArray(texto)
-                                        val listaIdsTemporaria = mutableListOf<String>()
-                                        val listaNomesTemporaria = mutableListOf<String>()
+                                        val listaTemporaria = mutableListOf<JogoModel>()
 
                                         for (i in 0 until jsonArray.length()) {
                                             val jsonObject = jsonArray.getJSONObject(i)
-                                            val id = jsonObject.optInt("id")
-                                            val nome = jsonObject.optString("name")
 
-                                            listaIdsTemporaria.add(id.toString())
-                                            listaNomesTemporaria.add(nome.toString())
+                                            val id = jsonObject.optInt("id")
+                                            val nome = if (jsonObject.isNull("name")) "Sem título disponível" else jsonObject.optString("name")
+                                            val data = if (jsonObject.isNull("first_release_date")) null else jsonObject.optLong("first_release_date")
+                                            val desc = if (jsonObject.isNull("summary")) "Sem descrição disponível" else jsonObject.optString("summary")
+
+                                            listaTemporaria.add(JogoModel(id = id, nome = nome, data = data, desc = desc))
                                         }
 
                                         withContext(Dispatchers.Main) {
-                                            idJogos = listaIdsTemporaria
-                                            nomeJogos = listaNomesTemporaria
+                                            listaJogos = listaTemporaria
                                             carregando = false
                                         }
 
                                     } catch (e: Exception) {
                                         Log.v("PDM", "Erro ao processar JSON: ${e.message}")
                                         withContext(Dispatchers.Main) {
-                                            idJogos = listOf("Erro ao carregar dados.")
+                                            listaJogos = listOf(JogoModel(id = 0, nome = "Erro ao carregar dados."))
                                             carregando = false
                                         }
                                     }
@@ -113,18 +112,19 @@ class MainActivity : ComponentActivity() {
                         }
                         if (carregando) {
                             Text("Carregando...")
-                        } else if (idJogos.isEmpty()) {
+                        } else if (listaJogos.isEmpty()) {
                             Text("Nenhum dado. Toque no botão acima.")
                         } else {
-                            Log.v("o objeto só com ids é", idJogos.toString())
-                            Log.v("o objeto só com nomes é", nomeJogos.toString())
                             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                items(nomeJogos) { nomeJogo ->
+                                items(listaJogos) { jogo ->
+                                    var expandido by rememberSaveable { mutableStateOf(false) }
+
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(8.dp)
-                                            .animateContentSize(),
+                                            .animateContentSize()
+                                            .clickable { expandido = !expandido },
                                         elevation = CardDefaults.cardElevation(4.dp),
                                         colors = CardDefaults.cardColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -132,7 +132,18 @@ class MainActivity : ComponentActivity() {
                                         )
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
-                                            Text(text = nomeJogo ?: "Sem título", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                                            Text(
+                                                text = jogo.nome ?: "Sem título disponível",
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.titleLarge
+                                            )
+                                            if (expandido) {
+                                                Text(
+                                                    text = jogo.desc ?: "Sem descrição disponível",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.padding(top = 8.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
