@@ -87,12 +87,13 @@ class MainActivity : ComponentActivity() {
                         resetarSenha(email)
                     },
                     onCadastroClick = { nome, email, senha, onSuccess ->
-                        // Nova ação de clique mapeada para a nossa função do Firebase
                         composeScope.launch {
                             val sucesso = cadastrarUsuario(nome, email, senha)
                             if (sucesso) onSuccess()
                         }
-                    }
+                    },
+                    userLog = userLog,
+                    database = database
                 )
             }
         }
@@ -179,6 +180,7 @@ object Rotas {
     const val LOGIN = "login"
     const val CADASTRO_USUARIO = "cadastro_usuario"
     const val LISTA_JOGOS = "lista_jogos"
+    const val PERFIL = "perfil"
 }
 
 @Composable
@@ -187,7 +189,9 @@ fun AppNavigation(
     navController: NavHostController,
     onLoginClick: (String, String, () -> Unit) -> Unit,
     onResetPasswordClick: (String) -> Unit,
-    onCadastroClick: (String, String, String, () -> Unit) -> Unit // Novo parâmetro
+    onCadastroClick: (String, String, String, () -> Unit) -> Unit,
+    userLog: UserModel?,
+    database: FirebaseDatabase
 ) {
     val startScreen = if (isUserLoggedIn) Rotas.LISTA_JOGOS else Rotas.LOGIN
 
@@ -202,23 +206,34 @@ fun AppNavigation(
                 onResetPasswordClick = onResetPasswordClick
             )
         }
+
         composable(route = Rotas.CADASTRO_USUARIO) {
-            // Agora abrindo a tela de cadastro real!
             TelaCadastroUsuario(
                 navController = navController,
                 onCadastroClick = onCadastroClick
             )
         }
+
         composable(route = Rotas.LISTA_JOGOS) {
             TelaListaJogos(
                 onLogoutClick = {
-                    // 1. Desloga o usuário do Firebase Authentication
-                    com.google.firebase.Firebase.auth.signOut()
-
-                    // 2. Redireciona para a tela de login limpando a pilha de telas
+                    Firebase.auth.signOut()
                     navController.navigate(Rotas.LOGIN) {
                         popUpTo(Rotas.LISTA_JOGOS) { inclusive = true }
                     }
+                },
+                onPerfilClick = {
+                    navController.navigate(Rotas.PERFIL)
+                }
+            )
+        }
+
+        composable(route = Rotas.PERFIL) {
+            TelaPerfil(
+                usuario = userLog,
+                database = database,
+                onVoltarClick = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -331,9 +346,12 @@ fun TelaLogin(
             )
         }
     }
-}// Encapsulando a busca Retrofit e a UI de Jogos em sua respectiva tela de destino
+}
 @Composable
-fun TelaListaJogos(onLogoutClick: () -> Unit) { // Adicionado o parâmetro de logout
+fun TelaListaJogos(
+    onLogoutClick: () -> Unit,
+    onPerfilClick: () -> Unit
+) {
     var jogos by remember { mutableStateOf(listOf<JogoModel>()) }
     var carregando by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -349,11 +367,17 @@ fun TelaListaJogos(onLogoutClick: () -> Unit) { // Adicionado o parâmetro de lo
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            // Criando uma barra superior elegante com o título do app e o botão de Sair
             @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
                 title = { Text("Meu3DS") },
                 actions = {
+                    IconButton(onClick = onPerfilClick) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Ver Perfil",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     TextButton(onClick = onLogoutClick) {
                         Text("Sair", color = MaterialTheme.colorScheme.error)
                     }
