@@ -2,11 +2,13 @@ package ufc.smd.meu3ds
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -77,10 +79,18 @@ class MainActivity : ComponentActivity() {
                 AppNavigation(
                     isUserLoggedIn = isUserLoggedIn,
                     navController = navController,
-                    onLoginClick = { email, senha, onSuccess ->
+                    onLoginClick = { email, senha, context, onSuccess ->
                         composeScope.launch {
                             val sucesso = logar(email, senha)
-                            if (sucesso) onSuccess()
+                            if (sucesso) {
+                                onSuccess()
+                            } else {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "E-mail ou senha incorretos.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     },
                     onResetPasswordClick = { email ->
@@ -187,7 +197,7 @@ object Rotas {
 fun AppNavigation(
     isUserLoggedIn: Boolean,
     navController: NavHostController,
-    onLoginClick: (String, String, () -> Unit) -> Unit,
+    onLoginClick: (String, String, android.content.Context, () -> Unit) -> Unit,
     onResetPasswordClick: (String) -> Unit,
     onCadastroClick: (String, String, String, () -> Unit) -> Unit,
     userLog: UserModel?,
@@ -244,11 +254,13 @@ fun AppNavigation(
 @Composable
 fun TelaLogin(
     navController: NavHostController,
-    onLoginClick: (String, String, () -> Unit) -> Unit,
+    onLoginClick: (String, String, android.content.Context, () -> Unit) -> Unit,
     onResetPasswordClick: (String) -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -315,7 +327,7 @@ fun TelaLogin(
 
         Button(
             onClick = {
-                onLoginClick(email, password) {
+                onLoginClick(email, password, context) {
                     navController.navigate(Rotas.LISTA_JOGOS) {
                         popUpTo(Rotas.LOGIN) { inclusive = true }
                     }

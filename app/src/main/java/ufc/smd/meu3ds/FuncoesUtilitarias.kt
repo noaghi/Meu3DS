@@ -49,7 +49,7 @@ suspend fun adicionarAmigoPorEmail(
             "Amigo adicionado com sucesso!"
         } catch (e: Exception) {
             Log.e("PDM", "Erro ao adicionar amigo", e)
-            "Erro ao conectar com o servidor."
+            return@withContext "Erro: ${e.localizedMessage}"
         }
     }
 }
