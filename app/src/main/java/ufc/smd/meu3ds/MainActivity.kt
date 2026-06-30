@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -234,7 +236,9 @@ fun AppNavigation(
                 },
                 onPerfilClick = {
                     navController.navigate(Rotas.PERFIL)
-                }
+                },
+                database = database,
+                uidUsuario = userLog?.uid
             )
         }
 
@@ -362,10 +366,13 @@ fun TelaLogin(
 @Composable
 fun TelaListaJogos(
     onLogoutClick: () -> Unit,
-    onPerfilClick: () -> Unit
+    onPerfilClick: () -> Unit,
+    database: FirebaseDatabase,
+    uidUsuario: String?
 ) {
     var jogos by remember { mutableStateOf(listOf<JogoModel>()) }
     var carregando by remember { mutableStateOf(false) }
+    var listaFavoritosIds by remember { mutableStateOf(listOf<Int>()) } // IDs favoritados
     val coroutineScope = rememberCoroutineScope()
 
     val retrofit = remember {
@@ -375,6 +382,14 @@ fun TelaListaJogos(
             .build()
     }
     val apiService = remember { retrofit.create(IGDBApiService::class.java) }
+
+    LaunchedEffect(uidUsuario) {
+        if (uidUsuario != null) {
+            escutarFavoritos(database, uidUsuario) { ids ->
+                listaFavoritosIds = ids
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -440,7 +455,24 @@ fun TelaListaJogos(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(jogos) { jogo ->
-                        JogoCard(jogo)
+                        val eFavorito = listaFavoritosIds.contains(jogo.id)
+
+                        JogoCard(
+                            jogo = jogo,
+                            isFavorito = eFavorito,
+                            onFavoritoClick = {
+                                if (uidUsuario != null) {
+                                    coroutineScope.launch {
+                                        alternarFavoritoFirebase(
+                                            database,
+                                            uidUsuario,
+                                            jogo,
+                                            isFavorito = eFavorito
+                                        )
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -461,7 +493,11 @@ fun BotaoConsultaListaGeral(onClick: () -> Unit) {
 }
 
 @Composable
-fun JogoCard(jogo: JogoModel) {
+fun JogoCard(
+    jogo: JogoModel,
+    isFavorito: Boolean,
+    onFavoritoClick: () -> Unit
+) {
     var expandido by rememberSaveable { mutableStateOf(false) }
 
     val dataFormatada = remember(jogo.data) {
@@ -487,15 +523,33 @@ fun JogoCard(jogo: JogoModel) {
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Text(
-                text = jogo.nome ?: "Sem título",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(dataFormatada)
-            if (expandido) {
-                Text(jogo.desc ?: "Sem descrição")
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            // Informações do Jogo
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = jogo.nome ?: "Sem título",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(text = dataFormatada, style = MaterialTheme.typography.bodySmall)
+
+                if (expandido) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = jogo.desc ?: "Sem descrição", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            // Botão de Favorito (Estrela)
+            IconButton(onClick = onFavoritoClick) {
+                Icon(
+                    imageVector = if (isFavorito) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = "Favoritar",
+                    tint = if (isFavorito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

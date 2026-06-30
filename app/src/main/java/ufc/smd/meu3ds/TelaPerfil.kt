@@ -1,18 +1,23 @@
 package ufc.smd.meu3ds
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -46,6 +52,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import kotlinx.coroutines.launch
+import ufc.smd.meu3ds.data.network.JogoModel
 import ufc.smd.meu3ds.data.network.UserModel
 
 @Composable
@@ -63,6 +70,9 @@ fun TelaPerfil(
 
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    var amigoSelecionadoParaJogos by remember { mutableStateOf<UserModel?>(null) }
+    var jogosDoAmigo by remember { mutableStateOf(listOf<JogoModel>()) }
 
     // Função interna para recarregar a lista de amigos localmente
     val atualizarListaAmigos = {
@@ -96,6 +106,28 @@ fun TelaPerfil(
     // Busca inicial ao abrir a tela
     LaunchedEffect(usuario?.uid) {
         atualizarListaAmigos()
+    }
+
+    LaunchedEffect(amigoSelecionadoParaJogos) {
+        if (amigoSelecionadoParaJogos?.uid != null) {
+            database.getReference("users")
+                .child(amigoSelecionadoParaJogos!!.uid!!)
+                .child("favorites")
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val lista = snapshot.children.map { jSnap ->
+                            JogoModel(
+                                id = jSnap.child("id").value?.toString()?.toInt() ?: 0,
+                                nome = jSnap.child("name").value?.toString(),
+                                data = jSnap.child("first_release_date").value?.toString()?.toLongOrNull(),
+                                desc = jSnap.child("summary").value?.toString()
+                            )
+                        }
+                        jogosDoAmigo = lista
+                    }
+                    override fun onCancelled(error: DatabaseError) {}
+                })
+        }
     }
 
     Scaffold(
@@ -223,19 +255,84 @@ fun TelaPerfil(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .clickable { amigoSelecionadoParaJogos = amigo },
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier
+                                    .padding(12.dp)
+                                    .fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween // Alinha o texto à esquerda e o botão à direita
                             ) {
-                                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(text = amigo.name ?: "Sem nome", fontWeight = FontWeight.Bold)
-                                    Text(text = amigo.email ?: "", style = MaterialTheme.typography.bodySmall)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f) // Garante que o texto não atropele o botão
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.secondary
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(text = amigo.name ?: "Sem nome", fontWeight = FontWeight.Bold)
+                                        Text(text = amigo.email ?: "", style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
+
+                                // Botão de excluir amigo
+                                IconButton(
+                                    onClick = {
+                                        if (usuario?.uid != null && amigo.uid != null) {
+                                            coroutineScope.launch {
+                                                val sucesso = removerAmigoDoFirebase(
+                                                    database = database,
+                                                    uidUsuarioAtual = usuario.uid,
+                                                    uidAmigo = amigo.uid
+                                                )
+                                                if (sucesso) {
+                                                    snackbarHostState.showSnackbar("Amigo removido.")
+                                                    atualizarListaAmigos() // Recarrega a lista reativa na tela
+                                                } else {
+                                                    snackbarHostState.showSnackbar("Erro ao remover amigo.")
+                                                }
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Remover Amigo",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                            if (amigoSelecionadoParaJogos != null) {
+                                AlertDialog(
+                                    onDismissRequest = { amigoSelecionadoParaJogos = null },
+                                    title = { Text("Favoritos de ${amigoSelecionadoParaJogos?.name}") },
+                                    text = {
+                                        if (jogosDoAmigo.isEmpty()) {
+                                            Text("Este amigo ainda não favoritou nenhum jogo.")
+                                        } else {
+                                            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                                                items(jogosDoAmigo) { jogo ->
+                                                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                                        Text(jogo.nome ?: "Sem título", fontWeight = FontWeight.Bold)
+                                                        HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = { amigoSelecionadoParaJogos = null }) {
+                                            Text("Fechar")
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
