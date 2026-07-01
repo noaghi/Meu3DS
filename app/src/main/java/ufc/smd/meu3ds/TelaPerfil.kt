@@ -1,7 +1,9 @@
 package ufc.smd.meu3ds
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -27,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -45,6 +51,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.database.DataSnapshot
@@ -55,6 +62,7 @@ import kotlinx.coroutines.launch
 import ufc.smd.meu3ds.data.network.JogoModel
 import ufc.smd.meu3ds.data.network.UserModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaPerfil(
     usuario: UserModel?,
@@ -63,14 +71,13 @@ fun TelaPerfil(
 ) {
     var listaAmigos by remember { mutableStateOf(listOf<UserModel>()) }
     var carregandoAmigos by remember { mutableStateOf(true) }
-
     var emailBusca by rememberSaveable { mutableStateOf("") }
     var processandoBusca by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var amigoSelecionadoParaJogos by remember { mutableStateOf<UserModel?>(null) }
+    var amgSelecionadoForJogos by remember { mutableStateOf<UserModel?>(null) }
     var jogosDoAmigo by remember { mutableStateOf(listOf<JogoModel>()) }
 
     val atualizarListaAmigos = {
@@ -91,24 +98,17 @@ fun TelaPerfil(
                         listaAmigos = amigos
                         carregandoAmigos = false
                     }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        carregandoAmigos = false
-                    }
+                    override fun onCancelled(error: DatabaseError) { carregandoAmigos = false }
                 })
-        } else {
-            carregandoAmigos = false
-        }
+        } else { carregandoAmigos = false }
     }
 
-    LaunchedEffect(usuario?.uid) {
-        atualizarListaAmigos()
-    }
+    LaunchedEffect(usuario?.uid) { atualizarListaAmigos() }
 
-    LaunchedEffect(amigoSelecionadoParaJogos) {
-        if (amigoSelecionadoParaJogos?.uid != null) {
+    LaunchedEffect(amgSelecionadoForJogos) {
+        if (amgSelecionadoForJogos?.uid != null) {
             database.getReference("users")
-                .child(amigoSelecionadoParaJogos!!.uid!!)
+                .child(amgSelecionadoForJogos!!.uid!!)
                 .child("favorites")
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
@@ -130,17 +130,16 @@ fun TelaPerfil(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
-                title = { Text("Meu Perfil") },
+                title = { Text("Meu Perfil", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     TextButton(onClick = onVoltarClick) {
-                        Text("Voltar")
+                        Text("Voltar", fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -148,28 +147,58 @@ fun TelaPerfil(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
-                .padding(24.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = usuario?.name ?: "Sem Nome", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(text = usuario?.email ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = usuario?.name ?: "Usuário",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = usuario?.email ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Adicionar Amigo",
+                text = "Adicionar novo amigo",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -180,8 +209,10 @@ fun TelaPerfil(
                 OutlinedTextField(
                     value = emailBusca,
                     onValueChange = { emailBusca = it },
-                    label = { Text("E-mail do amigo") },
+                    label = { Text("E-mail do seu amigo") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                     singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f),
                     enabled = !processandoBusca
                 )
@@ -191,14 +222,8 @@ fun TelaPerfil(
                         if (usuario?.uid != null && emailBusca.isNotBlank()) {
                             processandoBusca = true
                             coroutineScope.launch {
-                                val resultado = adicionarAmigoPorEmail(
-                                    database,
-                                    uidUsuarioAtual = usuario.uid,
-                                    emailAmigo = emailBusca
-
-                                )
+                                val resultado = adicionarAmigoPorEmail(database, usuario.uid, emailBusca)
                                 snackbarHostState.showSnackbar(resultado)
-
                                 if (resultado.contains("sucesso")) {
                                     emailBusca = ""
                                     atualizarListaAmigos()
@@ -208,59 +233,52 @@ fun TelaPerfil(
                         }
                     },
                     enabled = emailBusca.isNotBlank() && !processandoBusca,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.height(56.dp)
                 ) {
                     if (processandoBusca) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     } else {
-                        Text("Add")
+                        Text("Adicionar", fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Meus Amigos (${listaAmigos.size})",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             if (carregandoAmigos) {
-                CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
-                Text(
-                    text = "Carregando amigos...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             } else if (listaAmigos.isEmpty()) {
-                Text(
-                    text = "Nenhum amigo adicionado ainda.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text("Nenhum amigo adicionado ainda.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     items(listaAmigos) { amigo ->
-                        Card(
+                        OutlinedCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
-                                .clickable { amigoSelecionadoParaJogos = amigo },
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { amgSelecionadoForJogos = amigo },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .padding(12.dp)
+                                    .padding(14.dp)
                                     .fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -272,12 +290,20 @@ fun TelaPerfil(
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.secondary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
-                                        Text(text = amigo.name ?: "Sem nome", fontWeight = FontWeight.Bold)
-                                        Text(text = amigo.email ?: "", style = MaterialTheme.typography.bodySmall)
+                                        Text(
+                                            text = amigo.name ?: "Sem nome",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            text = amigo.email ?: "",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
 
@@ -285,11 +311,7 @@ fun TelaPerfil(
                                     onClick = {
                                         if (usuario?.uid != null && amigo.uid != null) {
                                             coroutineScope.launch {
-                                                val sucesso = removerAmigoDoFirebase(
-                                                    database = database,
-                                                    uidUsuarioAtual = usuario.uid,
-                                                    uidAmigo = amigo.uid
-                                                )
+                                                val sucesso = removerAmigoDoFirebase(database, usuario.uid, amigo.uid)
                                                 if (sucesso) {
                                                     snackbarHostState.showSnackbar("Amigo removido.")
                                                     atualizarListaAmigos()
@@ -302,7 +324,7 @@ fun TelaPerfil(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
-                                        contentDescription = "Remover Amigo",
+                                        contentDescription = "Remover",
                                         tint = MaterialTheme.colorScheme.error
                                     )
                                 }
@@ -314,27 +336,34 @@ fun TelaPerfil(
         }
     }
 
-    if (amigoSelecionadoParaJogos != null) {
+    if (amgSelecionadoForJogos != null) {
         AlertDialog(
-            onDismissRequest = { amigoSelecionadoParaJogos = null },
-            title = { Text("Favoritos de ${amigoSelecionadoParaJogos?.name}") },
+            onDismissRequest = { amgSelecionadoForJogos = null },
+            title = { Text("Favoritos de ${amgSelecionadoForJogos?.name}", fontWeight = FontWeight.Bold) },
             text = {
                 if (jogosDoAmigo.isEmpty()) {
                     Text("Este amigo ainda não favoritou nenhum jogo.")
                 } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
                         items(jogosDoAmigo) { jogo ->
-                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                Text(jogo.nome ?: "Sem título", fontWeight = FontWeight.Bold)
-                                HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+                            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                Text(
+                                    text = jogo.nome ?: "Sem título",
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(top = 6.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { amigoSelecionadoParaJogos = null }) {
-                    Text("Fechar")
+                TextButton(onClick = { amgSelecionadoForJogos = null }) {
+                    Text("Fechar", fontWeight = FontWeight.Bold)
                 }
             }
         )
