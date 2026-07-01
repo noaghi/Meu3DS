@@ -55,6 +55,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import ufc.smd.meu3ds.data.network.IGDBApiService
 import ufc.smd.meu3ds.data.network.JogoModel
+import ufc.smd.meu3ds.data.network.RetrofitClient
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +69,8 @@ fun TelaListaJogos(
     var carregando by remember { mutableStateOf(false) }
     var jogosFavoritosCompletos by remember { mutableStateOf(listOf<JogoModel>()) }
 
+    val apiService = RetrofitClient.apiService
+
     var textoBusca by rememberSaveable { mutableStateOf("") }
     var abaSelecionada by rememberSaveable { mutableStateOf(0) }
 
@@ -76,14 +79,6 @@ fun TelaListaJogos(
     var temMaisJogos by remember { mutableStateOf(true) }
 
     val coroutineScope = rememberCoroutineScope()
-
-    val retrofit = remember {
-        Retrofit.Builder()
-            .baseUrl("https://api.igdb.com/v4/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-    }
-    val apiService = remember { retrofit.create(IGDBApiService::class.java) }
 
     val buscarDadosDoServidor = { pagina: Int, termoPesquisa: String ->
         carregando = true
@@ -238,7 +233,7 @@ fun TelaListaJogos(
                                 )
                             }
                         }
-                    } else if (jogosExibidos.isEmpty()) { // <-- Corrigido: Fechou o if anterior antes de abrir o else if
+                    } else if (jogosExibidos.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -274,7 +269,7 @@ fun TelaListaJogos(
                             }
                         }
                     }
-                } // <-- Corrigido: Fechamento correto da Box de conteúdo da lista
+                }
 
                 if (abaSelecionada == 0 && textoBusca.trim().isEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -305,7 +300,7 @@ fun TelaListaJogos(
                         }
                     }
                 }
-            } // Fim da Column interna
-        } // Fim da Column principal
-    } // Fim do Scaffold
+            }
+        }
+    }
 }
