@@ -64,7 +64,6 @@ fun TelaPerfil(
     var listaAmigos by remember { mutableStateOf(listOf<UserModel>()) }
     var carregandoAmigos by remember { mutableStateOf(true) }
 
-    // Estados para o campo de adicionar amigo
     var emailBusca by rememberSaveable { mutableStateOf("") }
     var processandoBusca by remember { mutableStateOf(false) }
 
@@ -74,7 +73,6 @@ fun TelaPerfil(
     var amigoSelecionadoParaJogos by remember { mutableStateOf<UserModel?>(null) }
     var jogosDoAmigo by remember { mutableStateOf(listOf<JogoModel>()) }
 
-    // Função interna para recarregar a lista de amigos localmente
     val atualizarListaAmigos = {
         if (usuario?.uid != null) {
             database.getReference("users").child(usuario.uid).child("friends")
@@ -103,7 +101,6 @@ fun TelaPerfil(
         }
     }
 
-    // Busca inicial ao abrir a tela
     LaunchedEffect(usuario?.uid) {
         atualizarListaAmigos()
     }
@@ -155,7 +152,6 @@ fun TelaPerfil(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Dados básicos do usuário atual
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
@@ -170,7 +166,6 @@ fun TelaPerfil(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Formulário de Adicionar Amigo
             Text(
                 text = "Adicionar Amigo",
                 style = MaterialTheme.typography.titleMedium,
@@ -196,7 +191,6 @@ fun TelaPerfil(
                         if (usuario?.uid != null && emailBusca.isNotBlank()) {
                             processandoBusca = true
                             coroutineScope.launch {
-                                // Referencia a função externa criada na MainActivity
                                 val resultado = adicionarAmigoPorEmail(
                                     database,
                                     uidUsuarioAtual = usuario.uid,
@@ -207,7 +201,7 @@ fun TelaPerfil(
 
                                 if (resultado.contains("sucesso")) {
                                     emailBusca = ""
-                                    atualizarListaAmigos() // Recarrega a lista na tela
+                                    atualizarListaAmigos()
                                 }
                                 processandoBusca = false
                             }
@@ -231,7 +225,6 @@ fun TelaPerfil(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Lista de Amigos Existentes
             Text(
                 text = "Meus Amigos (${listaAmigos.size})",
                 style = MaterialTheme.typography.titleMedium,
@@ -242,6 +235,12 @@ fun TelaPerfil(
 
             if (carregandoAmigos) {
                 CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
+                Text(
+                    text = "Carregando amigos...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             } else if (listaAmigos.isEmpty()) {
                 Text(
                     text = "Nenhum amigo adicionado ainda.",
@@ -264,11 +263,11 @@ fun TelaPerfil(
                                     .padding(12.dp)
                                     .fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween // Alinha o texto à esquerda e o botão à direita
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f) // Garante que o texto não atropele o botão
+                                    modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Person,
@@ -282,7 +281,6 @@ fun TelaPerfil(
                                     }
                                 }
 
-                                // Botão de excluir amigo
                                 IconButton(
                                     onClick = {
                                         if (usuario?.uid != null && amigo.uid != null) {
@@ -294,7 +292,7 @@ fun TelaPerfil(
                                                 )
                                                 if (sucesso) {
                                                     snackbarHostState.showSnackbar("Amigo removido.")
-                                                    atualizarListaAmigos() // Recarrega a lista reativa na tela
+                                                    atualizarListaAmigos()
                                                 } else {
                                                     snackbarHostState.showSnackbar("Erro ao remover amigo.")
                                                 }
@@ -309,35 +307,36 @@ fun TelaPerfil(
                                     )
                                 }
                             }
-                            if (amigoSelecionadoParaJogos != null) {
-                                AlertDialog(
-                                    onDismissRequest = { amigoSelecionadoParaJogos = null },
-                                    title = { Text("Favoritos de ${amigoSelecionadoParaJogos?.name}") },
-                                    text = {
-                                        if (jogosDoAmigo.isEmpty()) {
-                                            Text("Este amigo ainda não favoritou nenhum jogo.")
-                                        } else {
-                                            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                                                items(jogosDoAmigo) { jogo ->
-                                                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                                        Text(jogo.nome ?: "Sem título", fontWeight = FontWeight.Bold)
-                                                        HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    confirmButton = {
-                                        TextButton(onClick = { amigoSelecionadoParaJogos = null }) {
-                                            Text("Fechar")
-                                        }
-                                    }
-                                )
-                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (amigoSelecionadoParaJogos != null) {
+        AlertDialog(
+            onDismissRequest = { amigoSelecionadoParaJogos = null },
+            title = { Text("Favoritos de ${amigoSelecionadoParaJogos?.name}") },
+            text = {
+                if (jogosDoAmigo.isEmpty()) {
+                    Text("Este amigo ainda não favoritou nenhum jogo.")
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(jogosDoAmigo) { jogo ->
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(jogo.nome ?: "Sem título", fontWeight = FontWeight.Bold)
+                                HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { amigoSelecionadoParaJogos = null }) {
+                    Text("Fechar")
+                }
+            }
+        )
     }
 }

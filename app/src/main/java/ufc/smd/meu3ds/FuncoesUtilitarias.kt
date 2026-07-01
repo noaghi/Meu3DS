@@ -66,7 +66,6 @@ suspend fun removerAmigoDoFirebase(
 ): Boolean {
     return withContext(Dispatchers.IO) {
         try {
-            // Acessa o nó do amigo dentro da lista de amigos do usuário atual e o remove
             database.getReference("users")
                 .child(uidUsuarioAtual)
                 .child("friends")
@@ -95,10 +94,8 @@ suspend fun alternarFavoritoFirebase(
                 .child(jogo.id.toString())
 
             if (isFavorito) {
-                // Se já era favorito, remove
                 ref.removeValue().await()
             } else {
-                // Se não era, salva os dados básicos do jogo
                 val dadosJogo = mapOf(
                     "id" to jogo.id,
                     "name" to (jogo.nome ?: "Sem título"),
@@ -115,7 +112,6 @@ suspend fun alternarFavoritoFirebase(
     }
 }
 
-// 2. Escuta os IDs dos favoritos do usuário em tempo real
 fun escutarFavoritos(
     database: FirebaseDatabase,
     uidUsuario: String,

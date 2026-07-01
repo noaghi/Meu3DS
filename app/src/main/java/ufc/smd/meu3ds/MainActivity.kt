@@ -7,17 +7,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,9 +60,12 @@ import java.util.*
 import kotlin.collections.listOf
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
-    // Escopo de classe para permitir acesso em qualquer lugar
     private lateinit var auth: FirebaseAuth
     private lateinit var database: FirebaseDatabase
     private var userLog by mutableStateOf<UserModel?>(null)
@@ -70,7 +81,6 @@ class MainActivity : ComponentActivity() {
         val isUserLoggedIn = auth.currentUser != null
         Log.v("PDM", "Usuário está logado? $isUserLoggedIn")
 
-        // Se o usuário já estiver logado ao abrir o app, busca os dados dele
         if (isUserLoggedIn) {
             auth.currentUser?.uid?.let { readUserFirebase(it) }
         }
@@ -85,14 +95,19 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     onLoginClick = { email, senha, context, onSuccess ->
                         composeScope.launch {
+                            if (email.isBlank() || senha.isBlank()) {
+                                Toast.makeText(this@MainActivity, "Por favor, preencha todos os campos.", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
                             val sucesso = logar(email, senha)
                             if (sucesso) {
                                 onSuccess()
                             } else {
                                 Toast.makeText(
                                     this@MainActivity,
-                                    "E-mail ou senha incorretos.",
-                                    Toast.LENGTH_SHORT
+                                    "E-mail ou senha incorretos. Verifique os dados e tente novamente.",
+                                    Toast.LENGTH_LONG
                                 ).show()
                             }
                         }
@@ -115,7 +130,6 @@ class MainActivity : ComponentActivity() {
 
     }
 
-    // Mover funções para fora do onCreate para estarem acessíveis
     private fun readUserFirebase(uid: String) {
         Log.v("PDM", "readUserFirebase: $uid")
         database.getReference("users").child(uid)
@@ -153,17 +167,13 @@ class MainActivity : ComponentActivity() {
 
     private suspend fun cadastrarUsuario(nome: String, email: String, senha: String): Boolean {
         return try {
-            // 1. Cria o usuário no Firebase Auth
             val authResult = auth.createUserWithEmailAndPassword(email, senha).await()
             val uid = authResult.user?.uid
 
             if (uid != null) {
-                // 2. Salva o nome e email no Realtime Database (Nó 'users')
-                // Sem salvar a senha, conforme as boas práticas de segurança!
                 val novoUsuario = UserModel(uid = uid, name = nome, email = email)
                 database.getReference("users").child(uid).setValue(novoUsuario).await()
 
-                // Atualiza o estado local do app
                 userLog = novoUsuario
                 true
             } else {
@@ -181,14 +191,15 @@ class MainActivity : ComponentActivity() {
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     Log.d("PDM", "Reset enviado com sucesso para: $email")
+                    Toast.makeText(this, "E-mail de recuperação enviado com sucesso!", Toast.LENGTH_SHORT).show()
                 } else {
                     Log.w("PDM", "Falha ao enviar reset", task.exception)
+                    Toast.makeText(this, "Erro: Não foi possível enviar o e-mail de recuperação.", Toast.LENGTH_LONG).show()
                 }
             }
     }
-}
 
-// --- COMPONENTES DE TELA E NAVEGAÇÃO ---
+}
 
 object Rotas {
     const val LOGIN = "login"
@@ -256,7 +267,6 @@ fun AppNavigation(
     }
 }
 
-
 @Composable
 fun TelaLogin(
     navController: NavHostController,
@@ -265,38 +275,47 @@ fun TelaLogin(
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-
     val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(28.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Icon(
+            imageVector = Icons.Default.Gamepad,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         Text(
             text = "Meu3DS",
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary
         )
 
         Text(
-            text = "Faça login para continuar",
+            text = "Gerencie sua coleção de jogos favoritos",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
         )
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("E-mail") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -306,10 +325,11 @@ fun TelaLogin(
             value = password,
             onValueChange = { password = it },
             label = { Text("Senha") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Lock Icon") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Senha") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true,
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -323,15 +343,15 @@ fun TelaLogin(
             ) {
                 Text(
                     text = "Esqueceu a senha?",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
+        ElevatedButton(
             onClick = {
                 onLoginClick(email, password, context) {
                     navController.navigate(Rotas.LISTA_JOGOS) {
@@ -339,11 +359,12 @@ fun TelaLogin(
                     }
                 }
             },
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .height(52.dp)
         ) {
-            Text(text = "Logar", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Entrar no App", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -351,20 +372,20 @@ fun TelaLogin(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically)
-        {
-            Text(text = "Não tem cadastro? ",
-                style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Clique aqui.",
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Não tem uma conta? ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = "Cadastre-se",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable {navController.navigate(Rotas.CADASTRO_USUARIO)
-                }
+                modifier = Modifier.clickable { navController.navigate(Rotas.CADASTRO_USUARIO) }
             )
         }
     }
 }
+
 @Composable
 fun TelaListaJogos(
     onLogoutClick: () -> Unit,
@@ -374,7 +395,7 @@ fun TelaListaJogos(
 ) {
     var jogosOriginal by remember { mutableStateOf(listOf<JogoModel>()) }
     var carregando by remember { mutableStateOf(false) }
-    var listaFavoritosIds by remember { mutableStateOf(listOf<Int>()) } // IDs favoritados
+    var listaFavoritosIds by remember { mutableStateOf(listOf<Int>()) }
 
     var textoBusca by rememberSaveable { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
@@ -393,7 +414,6 @@ fun TelaListaJogos(
             val meuClientId = "i8vwlcdm21hkn8ovfswk9hy3en61di"
             val meuToken = "Bearer 99fbmzghpmrnd0daxr17acjmsm1udh"
 
-            // Buscamos os top 100 jogos de 3DS de uma vez para filtrar na memória
             val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc; limit 100;"
             val mediaType = okhttp3.MediaType.parse("text/plain")
             val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
@@ -440,22 +460,32 @@ fun TelaListaJogos(
         topBar = {
             @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
-                title = { Text("Meu3DS") },
+                title = {
+                    Text(
+                        text = "Meu3DS",
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
                 actions = {
                     IconButton(onClick = onPerfilClick) {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Ver Perfil",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    TextButton(onClick = onLogoutClick) {
-                        Text("Sair", color = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onLogoutClick) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Sair",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -485,18 +515,12 @@ fun TelaListaJogos(
                     .padding(bottom = 12.dp)
             )
 
-            // Opcional: Mantive o botão caso queira forçar uma nova requisição/atualização
-            BotaoConsultaListaGeral {
-                buscarDadosDoServidor()
-            }
-
             if (carregando) {
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-                Text("Carregando com Retrofit...")
+                Text("Carregando...")
             } else if (jogosFiltrados.isEmpty()) {
                 Text("Nenhum jogo encontrado com esse termo.")
             } else {
-                // 3. Exibe a lista filtrada dinamicamente
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(jogosFiltrados) { jogo ->
                         val eFavorito = listaFavoritosIds.contains(jogo.id)
@@ -524,19 +548,6 @@ fun TelaListaJogos(
     }
 }
 
-
-@Composable
-fun BotaoConsultaListaGeral(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-    ) {
-        Text("Buscar no IGDB com retrofit")
-    }
-}
-
 @Composable
 fun JogoCard(
     jogo: JogoModel,
@@ -552,49 +563,87 @@ fun JogoCard(
             val formatador = SimpleDateFormat("dd/MM/yyyy", Locale.forLanguageTag("pt-BR"))
             formatador.format(data)
         } else {
-            "Sem data"
+            "Sem data de lançamento"
         }
     }
 
-    Card(
+    OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(vertical = 6.dp, horizontal = 4.dp)
             .animateContentSize()
             .clickable { expandido = !expandido },
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = if (expandido) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (expandido) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant
         )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Informações do Jogo
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = jogo.nome ?: "Sem título",
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(text = dataFormatada, style = MaterialTheme.typography.bodySmall)
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = dataFormatada,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 if (expandido) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = jogo.desc ?: "Sem descrição", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = jogo.desc ?: "Sem descrição disponível.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp
+                    )
                 }
             }
 
-            // Botão de Favorito (Estrela)
-            IconButton(onClick = onFavoritoClick) {
-                Icon(
-                    imageVector = if (isFavorito) Icons.Default.Star else Icons.Default.StarBorder,
-                    contentDescription = "Favoritar",
-                    tint = if (isFavorito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(
+                        if (isFavorito) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent
+                    )
+            ) {
+                IconButton(onClick = onFavoritoClick) {
+                    Icon(
+                        imageVector = if (isFavorito) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = "Favoritar",
+                        tint = if (isFavorito) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
         }
     }
@@ -613,104 +662,99 @@ fun TelaCadastroUsuario(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(28.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Criar Conta",
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary
         )
 
         Text(
-            text = "Insira seus dados para começar",
+            text = "Preencha os dados abaixo para começar",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
         )
 
-        // Campo Nome
         OutlinedTextField(
             value = nome,
             onValueChange = { nome = it },
             label = { Text("Nome Completo") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "User Icon") },
+            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Nome") },
             singleLine = true,
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo E-mail
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("E-mail") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo Senha
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Senha") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Lock Icon") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Senha") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true,
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Botão Cadastrar
-        Button(
+        ElevatedButton(
             onClick = {
                 coroutineScope.launch {
                     onCadastroClick(nome, email, password) {
-                        // Callback de sucesso: manda o usuário para a lista de jogos
                         navController.navigate(Rotas.LISTA_JOGOS) {
-                            // Limpa o histórico para o usuário não voltar para o cadastro ao apertar 'Voltar'
                             popUpTo(Rotas.LOGIN) { inclusive = true }
                         }
                     }
                 }
             },
-            // Só ativa o botão se nenhum campo estiver em branco
             enabled = nome.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .height(52.dp)
         ) {
-            Text(text = "Cadastrar", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Finalizar Cadastro", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Link para Voltar ao Login
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Já tem uma conta? ", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Já possui uma conta? ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                text = "Faça login.",
+                text = "Faça Login",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable {
-                    navController.popBackStack() // Volta para a tela anterior (Login)
-                }
+                modifier = Modifier.clickable { navController.popBackStack() }
             )
         }
     }
 }
+
