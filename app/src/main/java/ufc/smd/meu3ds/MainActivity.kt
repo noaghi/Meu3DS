@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
@@ -50,6 +51,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.listOf
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 
 class MainActivity : ComponentActivity() {
     // Escopo de classe para permitir acesso em qualquer lugar
@@ -373,6 +375,9 @@ fun TelaListaJogos(
     var jogos by remember { mutableStateOf(listOf<JogoModel>()) }
     var carregando by remember { mutableStateOf(false) }
     var listaFavoritosIds by remember { mutableStateOf(listOf<Int>()) } // IDs favoritados
+
+    var textoBusca by rememberSaveable { mutableStateOf("") }
+
     val coroutineScope = rememberCoroutineScope()
 
     val retrofit = remember {
@@ -423,14 +428,40 @@ fun TelaListaJogos(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            OutlinedTextField(
+                value = textoBusca,
+                onValueChange = { textoBusca = it },
+                placeholder = { Text("Buscar jogo por título...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+                trailingIcon = {
+                    if (textoBusca.isNotBlank()) {
+                        IconButton(onClick = { textoBusca = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Limpar")
+                        }
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            )
+
             BotaoConsultaListaGeral {
                 carregando = true
                 jogos = emptyList()
 
                 coroutineScope.launch(Dispatchers.IO) {
-                    val meuClientId = "u6rjgzn82nz0rd3yi5zl9eqoofc2rt"
-                    val meuToken = "Bearer k2ktyy51lk9vjm85hubtf6o6r9efhf"
-                    val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc;"
+                    val meuClientId = "i8vwlcdm21hkn8ovfswk9hy3en61di"
+                    val meuToken = "Bearer 99fbmzghpmrnd0daxr17acjmsm1udh"
+
+                    val filtroNome = if (textoBusca.isNotBlank()) {
+                        " & name = *\"${textoBusca.trim()}\"*"
+                    } else {
+                        ""
+                    }
+
+                    val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37$filtroNome; sort total_rating desc; limit 100;"
+
                     val mediaType = okhttp3.MediaType.parse("text/plain")
                     val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
                     try {
@@ -451,7 +482,7 @@ fun TelaListaJogos(
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp))
                 Text("Carregando com Retrofit...")
             } else if (jogos.isEmpty()) {
-                Text("Nenhum dado. Toque no botão acima.")
+                Text(if (textoBusca.isNotBlank()) "Nenhum jogo encontrado com esse termo." else "Nenhum dado. Toque no botão acima.")
             } else {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(jogos) { jogo ->
