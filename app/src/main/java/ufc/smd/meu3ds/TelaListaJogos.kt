@@ -1,15 +1,17 @@
 package ufc.smd.meu3ds
 
 import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,14 +66,13 @@ fun TelaListaJogos(
 ) {
     var jogosOriginal by remember { mutableStateOf(listOf<JogoModel>()) }
     var carregando by remember { mutableStateOf(false) }
-    var listaFavoritosIds by remember { mutableStateOf(listOf<Int>()) }
+    var jogosFavoritosCompletos by remember { mutableStateOf(listOf<JogoModel>()) }
 
     var textoBusca by rememberSaveable { mutableStateOf("") }
     var abaSelecionada by rememberSaveable { mutableStateOf(0) }
 
-    // --- NOVOS ESTADOS PARA PAGINAÇÃO ---
     var paginaAtual by rememberSaveable { mutableStateOf(1) }
-    val itensPorPagina = 20 // Define o tamanho do "limit"
+    val itensPorPagina = 20
     var temMaisJogos by remember { mutableStateOf(true) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -84,18 +85,19 @@ fun TelaListaJogos(
     }
     val apiService = remember { retrofit.create(IGDBApiService::class.java) }
 
-    // Função de busca atualizada para aceitar a página como parâmetro
-    val buscarDadosDoServidor = { pagina: Int ->
+    val buscarDadosDoServidor = { pagina: Int, termoPesquisa: String ->
         carregando = true
         coroutineScope.launch(Dispatchers.IO) {
             val meuClientId = "i8vwlcdm21hkn8ovfswk9hy3en61di"
             val meuToken = "Bearer 99fbmzghpmrnd0daxr17acjmsm1udh"
 
-            // O offset calcula quantos itens pular. Ex: Página 1 -> (1-1)*20 = 0. Página 2 -> (2-1)*20 = 20.
-            val calculoOffset = (pagina - 1) * itensPorPagina
+            val textoDoFiltro = if (termoPesquisa.trim().isBlank()) {
+                val calculoOffset = (pagina - 1) * itensPorPagina
+                "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc; limit $itensPorPagina; offset $calculoOffset;"
+            } else {
+                "fields name, first_release_date, summary; search \"${termoPesquisa.trim()}\"; where platforms = 37; limit 50;"
+            }
 
-            // Injetando dinamicamente o limit e o offset na query string da IGDB
-            val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc; limit $itensPorPagina; offset $calculoOffset;"
             val mediaType = okhttp3.MediaType.parse("text/plain")
             val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
 
@@ -103,8 +105,7 @@ fun TelaListaJogos(
                 val respostaApi = apiService.buscarJogos(meuClientId, meuToken, corpoRequisicao)
                 withContext(Dispatchers.Main) {
                     jogosOriginal = respostaApi
-                    // Se a API retornar menos itens que o limite, significa que chegamos na última página
-                    temMaisJogos = respostaApi.size == itensPorPagina
+                    temMaisJogos = termoPesquisa.trim().isBlank() && respostaApi.size == itensPorPagina
                     carregando = false
                 }
             } catch (e: Exception) {
@@ -116,32 +117,38 @@ fun TelaListaJogos(
         }
     }
 
-    // Dispara a busca sempre que a página atual mudar (e na primeira inicialização)
     LaunchedEffect(paginaAtual) {
-        buscarDadosDoServidor(paginaAtual)
+        if (textoBusca.trim().isEmpty()) {
+            buscarDadosDoServidor(paginaAtual, "")
+        }
+    }
+
+    LaunchedEffect(textoBusca) {
+        if (abaSelecionada == 0) {
+            paginaAtual = 1
+            buscarDadosDoServidor(1, textoBusca)
+        }
     }
 
     LaunchedEffect(uidUsuario) {
         if (uidUsuario != null) {
-            escutarFavoritos(database, uidUsuario) { ids ->
-                listaFavoritosIds = ids
+            escutarFavoritos(database, uidUsuario) { lista ->
+                jogosFavoritosCompletos = lista
             }
         }
     }
 
-    val jogosExibidos = remember(textoBusca, jogosOriginal, abaSelecionada, listaFavoritosIds) {
-        val listaBase = if (abaSelecionada == 0) {
+    val jogosExibidos = remember(textoBusca, jogosOriginal, abaSelecionada, jogosFavoritosCompletos) {
+        if (abaSelecionada == 0) {
             jogosOriginal
         } else {
-            // Dica: para os favoritos, filtramos localmente o que já está baixado na página atual
-            jogosOriginal.filter { listaFavoritosIds.contains(it.id) }
-        }
-
-        if (textoBusca.isBlank()) {
-            listaBase
-        } else {
-            listaBase.filter { jogo ->
-                jogo.nome?.contains(textoBusca, ignoreCase = true) == true
+            val textoLimpo = textoBusca.trim()
+            if (textoLimpo.isEmpty()) {
+                jogosFavoritosCompletos
+            } else {
+                jogosFavoritosCompletos.filter { jogo ->
+                    jogo.nome?.contains(textoLimpo, ignoreCase = true) == true
+                }
             }
         }
     }
@@ -202,11 +209,11 @@ fun TelaListaJogos(
                     value = textoBusca,
                     onValueChange = { textoBusca = it },
                     placeholder = {
-                        Text(if (abaSelecionada == 0) "Buscar na lista geral..." else "Buscar nos meus favoritos...")
+                        Text(if (abaSelecionada == 0) "Buscar em todo o catálogo..." else "Buscar nos meus favoritos...")
                     },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
                     trailingIcon = {
-                        if (textoBusca.isNotBlank()) {
+                        if (textoBusca.isNotEmpty()) {
                             IconButton(onClick = { textoBusca = "" }) {
                                 Icon(Icons.Default.Clear, contentDescription = "Limpar")
                             }
@@ -219,52 +226,57 @@ fun TelaListaJogos(
                         .padding(bottom = 12.dp)
                 )
 
-                if (carregando) {
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Buscando jogos no servidor...", style = MaterialTheme.typography.bodyMedium)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (carregando) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Buscando jogos no servidor...",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
-                    }
-                } else if (jogosExibidos.isEmpty()) {
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = if (abaSelecionada == 1 && textoBusca.isBlank())
-                                "Você ainda não favoritou nenhum jogo."
-                            else "Nenhum jogo encontrado.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    // LazyColumn agora ocupa o espaço dinâmico deixando margem para a paginação abaixo
-                    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        items(jogosExibidos) { jogo ->
-                            val eFavorito = listaFavoritosIds.contains(jogo.id)
-
-                            JogoCard(
-                                jogo = jogo,
-                                isFavorito = eFavorito,
-                                onFavoritoClick = {
-                                    if (uidUsuario != null) {
-                                        coroutineScope.launch {
-                                            alternarFavoritoFirebase(
-                                                database,
-                                                uidUsuario,
-                                                jogo,
-                                                isFavorito = eFavorito
-                                            )
-                                        }
-                                    }
-                                }
+                    } else if (jogosExibidos.isEmpty()) { // <-- Corrigido: Fechou o if anterior antes de abrir o else if
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (abaSelecionada == 1 && textoBusca.isBlank())
+                                    "Você ainda não favoritou nenhum jogo."
+                                else "Nenhum jogo encontrado.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(jogosExibidos) { jogo ->
+                                val eFavorito = jogosFavoritosCompletos.any { it.id == jogo.id }
+                                JogoCard(
+                                    jogo = jogo,
+                                    isFavorito = eFavorito,
+                                    onFavoritoClick = {
+                                        if (uidUsuario != null) {
+                                            coroutineScope.launch {
+                                                alternarFavoritoFirebase(
+                                                    database,
+                                                    uidUsuario,
+                                                    jogo,
+                                                    isFavorito = eFavorito
+                                                )
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
-                }
+                } // <-- Corrigido: Fechamento correto da Box de conteúdo da lista
 
-                // --- CONTROLES DE PAGINAÇÃO VISUAIS (Apenas na aba de Todos os Jogos) ---
-                if (abaSelecionada == 0) {
+                if (abaSelecionada == 0 && textoBusca.trim().isEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -283,7 +295,7 @@ fun TelaListaJogos(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
-                        ) // <-- A vírgula fecha o parâmetro da Row antes do próximo elemento
+                        )
 
                         TextButton(
                             onClick = { if (temMaisJogos) paginaAtual++ },
@@ -293,7 +305,7 @@ fun TelaListaJogos(
                         }
                     }
                 }
-            }
-        }
-    }
+            } // Fim da Column interna
+        } // Fim da Column principal
+    } // Fim do Scaffold
 }

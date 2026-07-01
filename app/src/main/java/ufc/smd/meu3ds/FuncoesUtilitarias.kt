@@ -114,15 +114,22 @@ suspend fun alternarFavoritoFirebase(
 fun escutarFavoritos(
     database: FirebaseDatabase,
     uidUsuario: String,
-    onResult: (List<Int>) -> Unit
+    onResult: (List<JogoModel>) -> Unit
 ) {
     database.getReference("users")
         .child(uidUsuario)
         .child("favorites")
         .addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val listaIds = snapshot.children.mapNotNull { it.key?.toIntOrNull() }
-                onResult(listaIds)
+                val listaJogos = snapshot.children.map { jSnap ->
+                    JogoModel(
+                        id = jSnap.child("id").value?.toString()?.toInt() ?: 0,
+                        nome = jSnap.child("name").value?.toString(),
+                        data = jSnap.child("first_release_date").value?.toString()?.toLongOrNull(),
+                        desc = jSnap.child("summary").value?.toString()
+                    )
+                }
+                onResult(listaJogos)
             }
             override fun onCancelled(error: DatabaseError) {}
         })

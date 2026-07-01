@@ -14,3 +14,7 @@ interface IGDBApiService {
         @Body query: RequestBody
     ): List<JogoModel>
 }
+
+object RetrofitClient {
+
+}
