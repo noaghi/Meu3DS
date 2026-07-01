@@ -1,8 +1,10 @@
 package ufc.smd.meu3ds
 
 import android.util.Log
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -66,6 +69,11 @@ fun TelaListaJogos(
     var textoBusca by rememberSaveable { mutableStateOf("") }
     var abaSelecionada by rememberSaveable { mutableStateOf(0) }
 
+    // --- NOVOS ESTADOS PARA PAGINAÇÃO ---
+    var paginaAtual by rememberSaveable { mutableStateOf(1) }
+    val itensPorPagina = 20 // Define o tamanho do "limit"
+    var temMaisJogos by remember { mutableStateOf(true) }
+
     val coroutineScope = rememberCoroutineScope()
 
     val retrofit = remember {
@@ -76,12 +84,18 @@ fun TelaListaJogos(
     }
     val apiService = remember { retrofit.create(IGDBApiService::class.java) }
 
-    val buscarDadosDoServidor = {
+    // Função de busca atualizada para aceitar a página como parâmetro
+    val buscarDadosDoServidor = { pagina: Int ->
         carregando = true
         coroutineScope.launch(Dispatchers.IO) {
             val meuClientId = "i8vwlcdm21hkn8ovfswk9hy3en61di"
             val meuToken = "Bearer 99fbmzghpmrnd0daxr17acjmsm1udh"
-            val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc; limit 100;"
+
+            // O offset calcula quantos itens pular. Ex: Página 1 -> (1-1)*20 = 0. Página 2 -> (2-1)*20 = 20.
+            val calculoOffset = (pagina - 1) * itensPorPagina
+
+            // Injetando dinamicamente o limit e o offset na query string da IGDB
+            val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc; limit $itensPorPagina; offset $calculoOffset;"
             val mediaType = okhttp3.MediaType.parse("text/plain")
             val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
 
@@ -89,6 +103,8 @@ fun TelaListaJogos(
                 val respostaApi = apiService.buscarJogos(meuClientId, meuToken, corpoRequisicao)
                 withContext(Dispatchers.Main) {
                     jogosOriginal = respostaApi
+                    // Se a API retornar menos itens que o limite, significa que chegamos na última página
+                    temMaisJogos = respostaApi.size == itensPorPagina
                     carregando = false
                 }
             } catch (e: Exception) {
@@ -100,8 +116,9 @@ fun TelaListaJogos(
         }
     }
 
-    LaunchedEffect(Unit) {
-        buscarDadosDoServidor()
+    // Dispara a busca sempre que a página atual mudar (e na primeira inicialização)
+    LaunchedEffect(paginaAtual) {
+        buscarDadosDoServidor(paginaAtual)
     }
 
     LaunchedEffect(uidUsuario) {
@@ -116,6 +133,7 @@ fun TelaListaJogos(
         val listaBase = if (abaSelecionada == 0) {
             jogosOriginal
         } else {
+            // Dica: para os favoritos, filtramos localmente o que já está baixado na página atual
             jogosOriginal.filter { listaFavoritosIds.contains(it.id) }
         }
 
@@ -202,7 +220,7 @@ fun TelaListaJogos(
                 )
 
                 if (carregando) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(8.dp))
@@ -210,7 +228,7 @@ fun TelaListaJogos(
                         }
                     }
                 } else if (jogosExibidos.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Text(
                             text = if (abaSelecionada == 1 && textoBusca.isBlank())
                                 "Você ainda não favoritou nenhum jogo."
@@ -220,7 +238,8 @@ fun TelaListaJogos(
                         )
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    // LazyColumn agora ocupa o espaço dinâmico deixando margem para a paginação abaixo
+                    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         items(jogosExibidos) { jogo ->
                             val eFavorito = listaFavoritosIds.contains(jogo.id)
 
@@ -240,6 +259,37 @@ fun TelaListaJogos(
                                     }
                                 }
                             )
+                        }
+                    }
+                }
+
+                // --- CONTROLES DE PAGINAÇÃO VISUAIS (Apenas na aba de Todos os Jogos) ---
+                if (abaSelecionada == 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { if (paginaAtual > 1) paginaAtual-- },
+                            enabled = paginaAtual > 1 && !carregando
+                        ) {
+                            Text("Anterior", fontWeight = FontWeight.Bold)
+                        }
+
+                        Text(
+                            text = "Página $paginaAtual",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        ) // <-- A vírgula fecha o parâmetro da Row antes do próximo elemento
+
+                        TextButton(
+                            onClick = { if (temMaisJogos) paginaAtual++ },
+                            enabled = temMaisJogos && !carregando
+                        ) {
+                            Text("Próxima", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -1,4 +1,3 @@
-
 package ufc.smd.meu3ds
 
 import android.util.Log
