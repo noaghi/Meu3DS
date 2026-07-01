@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
@@ -74,14 +74,20 @@ fun TelaPerfil(
     var emailBusca by rememberSaveable { mutableStateOf("") }
     var processandoBusca by remember { mutableStateOf(false) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var amgSelecionadoForJogos by remember { mutableStateOf<UserModel?>(null) }
     var jogosDoAmigo by remember { mutableStateOf(listOf<JogoModel>()) }
 
+    var modoEdicaoLiberado by remember { mutableStateOf(false) }
+    var nomeEditado by rememberSaveable(usuario) { mutableStateOf(usuario?.name ?: "") }
+    var emailEditado by rememberSaveable(usuario) { mutableStateOf(usuario?.email ?: "") }
+
     val atualizarListaAmigos = {
         if (usuario?.uid != null) {
+            carregandoAmigos = true
             database.getReference("users").child(usuario.uid).child("friends")
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
@@ -98,12 +104,18 @@ fun TelaPerfil(
                         listaAmigos = amigos
                         carregandoAmigos = false
                     }
-                    override fun onCancelled(error: DatabaseError) { carregandoAmigos = false }
+                    override fun onCancelled(error: DatabaseError) {
+                        carregandoAmigos = false
+                    }
                 })
-        } else { carregandoAmigos = false }
+        } else {
+            carregandoAmigos = false
+        }
     }
 
-    LaunchedEffect(usuario?.uid) { atualizarListaAmigos() }
+    LaunchedEffect(usuario?.uid) {
+        atualizarListaAmigos()
+    }
 
     LaunchedEffect(amgSelecionadoForJogos) {
         if (amgSelecionadoForJogos?.uid != null) {
@@ -155,44 +167,109 @@ fun TelaPerfil(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
             ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(36.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Dados Cadastrais",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = nomeEditado,
+                        onValueChange = { nomeEditado = it },
+                        label = { Text("Nome Completo") },
+                        enabled = modoEdicaoLiberado,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = emailEditado,
+                        onValueChange = { emailEditado = it },
+                        label = { Text("E-mail") },
+                        enabled = modoEdicaoLiberado,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            if (!modoEdicaoLiberado) {
+                                autenticarBiometria(
+                                    context = context,
+                                    onSucesso = {
+                                        modoEdicaoLiberado = true
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Identidade confirmada! Edição liberada.")
+                                        }
+                                    },
+                                    onErro = { erro ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Falha na segurança: $erro")
+                                        }
+                                    }
+                                )
+                            } else {
+                                if (usuario?.uid != null && nomeEditado.isNotBlank() && emailEditado.isNotBlank()) {
+                                    val dadosAtualizados = mapOf(
+                                        "name" to nomeEditado.trim(),
+                                        "email" to emailEditado.trim()
+                                    )
+                                    database.getReference("users").child(usuario.uid)
+                                        .updateChildren(dadosAtualizados)
+                                        .addOnCompleteListener { task ->
+                                            if (task.isSuccessful) {
+                                                modoEdicaoLiberado = false
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("Dados salvos com sucesso!")
+                                                }
+                                            } else {
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("Erro ao salvar no banco de dados.")
+                                                }
+                                            }
+                                        }
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = usuario?.name ?: "Usuário",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = usuario?.email ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            text = if (modoEdicaoLiberado) "Salvar Alterações" else "Liberar Edição com Biometria",
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Adicionar novo amigo",
@@ -201,7 +278,9 @@ fun TelaPerfil(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -237,14 +316,17 @@ fun TelaPerfil(
                     modifier = Modifier.height(56.dp)
                 ) {
                     if (processandoBusca) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                     } else {
                         Text("Adicionar", fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -255,78 +337,92 @@ fun TelaPerfil(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (carregandoAmigos) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (listaAmigos.isEmpty()) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text("Nenhum amigo adicionado ainda.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    items(listaAmigos) { amigo ->
-                        OutlinedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { amgSelecionadoForJogos = amigo },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Row(
+// --- CONTAINER COM PESO DINÂMICO PARA EVITAR ERRO DE MEDIÇÃO ---
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (carregandoAmigos) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (listaAmigos.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Nenhum amigo adicionado ainda.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(listaAmigos) { amigo ->
+                            OutlinedCard(
                                 modifier = Modifier
-                                    .padding(14.dp)
-                                    .fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { amgSelecionadoForJogos = amigo },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                             ) {
                                 Row(
+                                    modifier = Modifier
+                                        .padding(14.dp)
+                                        .fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = amigo.name ?: "Sem nome",
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.bodyLarge
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
-                                        Text(
-                                            text = amigo.email ?: "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = amigo.name ?: "Sem nome",
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                text = amigo.email ?: "",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
-                                }
-
-                                IconButton(
-                                    onClick = {
-                                        if (usuario?.uid != null && amigo.uid != null) {
-                                            coroutineScope.launch {
-                                                val sucesso = removerAmigoDoFirebase(database, usuario.uid, amigo.uid)
-                                                if (sucesso) {
-                                                    snackbarHostState.showSnackbar("Amigo removido.")
-                                                    atualizarListaAmigos()
-                                                } else {
-                                                    snackbarHostState.showSnackbar("Erro ao remover amigo.")
+                                    IconButton(
+                                        onClick = {
+                                            if (usuario?.uid != null && amigo.uid != null) {
+                                                coroutineScope.launch {
+                                                    val sucesso = removerAmigoDoFirebase(
+                                                        database,
+                                                        usuario.uid,
+                                                        amigo.uid
+                                                    )
+                                                    if (sucesso) {
+                                                        snackbarHostState.showSnackbar("Amigo removido.")
+                                                        atualizarListaAmigos()
+                                                    } else {
+                                                        snackbarHostState.showSnackbar("Erro ao remover amigo.")
+                                                    }
                                                 }
                                             }
                                         }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Remover",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Remover",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
                                 }
                             }
                         }
@@ -336,10 +432,16 @@ fun TelaPerfil(
         }
     }
 
+// --- DIÁLOGO DE VISUALIZAÇÃO DOS FAVORITOS DO AMIGO ---
     if (amgSelecionadoForJogos != null) {
         AlertDialog(
             onDismissRequest = { amgSelecionadoForJogos = null },
-            title = { Text("Favoritos de ${amgSelecionadoForJogos?.name}", fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Favoritos de ${amgSelecionadoForJogos?.name}",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 if (jogosDoAmigo.isEmpty()) {
                     Text("Este amigo ainda não favoritou nenhum jogo.")

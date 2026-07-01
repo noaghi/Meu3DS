@@ -79,7 +79,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.fragment.app.FragmentActivity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var database: FirebaseDatabase
     private var userLog by mutableStateOf<UserModel?>(null)

@@ -10,6 +10,11 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import ufc.smd.meu3ds.data.network.JogoModel
+import android.content.Context
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 
 suspend fun adicionarAmigoPorEmail(
     database: FirebaseDatabase,
@@ -133,4 +138,56 @@ fun escutarFavoritos(
             }
             override fun onCancelled(error: DatabaseError) {}
         })
+}
+
+fun autenticarBiometria(
+    context: Context,
+    onSucesso: () -> Unit,
+    onErro: (String) -> Unit
+) {
+    val biometricManager = BiometricManager.from(context)
+    val autenticadoresPermitidos = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+    when (biometricManager.canAuthenticate(autenticadoresPermitidos)) {
+        BiometricManager.BIOMETRIC_SUCCESS -> {
+            val activity = context as? FragmentActivity
+            if (activity == null) {
+                onErro("Erro de contexto do sistema.")
+                return
+            }
+
+            val executor = ContextCompat.getMainExecutor(context)
+
+            val biometricPrompt = BiometricPrompt(activity, executor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        onSucesso()
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        onErro(errString.toString())
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        onErro("Autenticação falhou. Tente novamente.")
+                    }
+                }
+            )
+
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Confirme sua identidade")
+                .setSubtitle("Autentique-se para liberar a edição dos seus dados")
+                .setAllowedAuthenticators(autenticadoresPermitidos)
+                .build()
+
+            biometricPrompt.authenticate(promptInfo)
+        }
+        else -> {
+            onSucesso()
+        }
+    }
 }
