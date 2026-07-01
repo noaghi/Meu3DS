@@ -372,12 +372,11 @@ fun TelaListaJogos(
     database: FirebaseDatabase,
     uidUsuario: String?
 ) {
-    var jogos by remember { mutableStateOf(listOf<JogoModel>()) }
+    var jogosOriginal by remember { mutableStateOf(listOf<JogoModel>()) }
     var carregando by remember { mutableStateOf(false) }
     var listaFavoritosIds by remember { mutableStateOf(listOf<Int>()) } // IDs favoritados
 
     var textoBusca by rememberSaveable { mutableStateOf("") }
-
     val coroutineScope = rememberCoroutineScope()
 
     val retrofit = remember {
@@ -388,10 +387,50 @@ fun TelaListaJogos(
     }
     val apiService = remember { retrofit.create(IGDBApiService::class.java) }
 
+    val buscarDadosDoServidor = {
+        carregando = true
+        coroutineScope.launch(Dispatchers.IO) {
+            val meuClientId = "i8vwlcdm21hkn8ovfswk9hy3en61di"
+            val meuToken = "Bearer 99fbmzghpmrnd0daxr17acjmsm1udh"
+
+            // Buscamos os top 100 jogos de 3DS de uma vez para filtrar na memória
+            val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37; sort total_rating desc; limit 100;"
+            val mediaType = okhttp3.MediaType.parse("text/plain")
+            val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
+
+            try {
+                val respostaApi = apiService.buscarJogos(meuClientId, meuToken, corpoRequisicao)
+                withContext(Dispatchers.Main) {
+                    jogosOriginal = respostaApi
+                    carregando = false
+                }
+            } catch (e: Exception) {
+                Log.e("erro", "Erro na requisição: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    carregando = false
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        buscarDadosDoServidor()
+    }
+
     LaunchedEffect(uidUsuario) {
         if (uidUsuario != null) {
             escutarFavoritos(database, uidUsuario) { ids ->
                 listaFavoritosIds = ids
+            }
+        }
+    }
+
+    val jogosFiltrados = remember(textoBusca, jogosOriginal) {
+        if (textoBusca.isBlank()) {
+            jogosOriginal
+        } else {
+            jogosOriginal.filter { jogo ->
+                jogo.nome?.contains(textoBusca, ignoreCase = true) == true
             }
         }
     }
@@ -446,46 +485,20 @@ fun TelaListaJogos(
                     .padding(bottom = 12.dp)
             )
 
+            // Opcional: Mantive o botão caso queira forçar uma nova requisição/atualização
             BotaoConsultaListaGeral {
-                carregando = true
-                jogos = emptyList()
-
-                coroutineScope.launch(Dispatchers.IO) {
-                    val meuClientId = "i8vwlcdm21hkn8ovfswk9hy3en61di"
-                    val meuToken = "Bearer 99fbmzghpmrnd0daxr17acjmsm1udh"
-
-                    val filtroNome = if (textoBusca.isNotBlank()) {
-                        " & name = *\"${textoBusca.trim()}\"*"
-                    } else {
-                        ""
-                    }
-
-                    val textoDoFiltro = "fields name, first_release_date, summary; where platforms = 37$filtroNome; sort total_rating desc; limit 100;"
-
-                    val mediaType = okhttp3.MediaType.parse("text/plain")
-                    val corpoRequisicao = okhttp3.RequestBody.create(mediaType, textoDoFiltro)
-                    try {
-                        val respostaApi = apiService.buscarJogos(meuClientId, meuToken, corpoRequisicao)
-                        withContext(Dispatchers.Main) {
-                            jogos = respostaApi
-                            carregando = false
-                        }
-                    } catch (e: Exception) {
-                        Log.e("erro", "Erro na requisição: ${e.message}")
-                        withContext(Dispatchers.Main) {
-                            carregando = false
-                        }
-                    }
-                }
+                buscarDadosDoServidor()
             }
+
             if (carregando) {
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp))
                 Text("Carregando com Retrofit...")
-            } else if (jogos.isEmpty()) {
-                Text(if (textoBusca.isNotBlank()) "Nenhum jogo encontrado com esse termo." else "Nenhum dado. Toque no botão acima.")
+            } else if (jogosFiltrados.isEmpty()) {
+                Text("Nenhum jogo encontrado com esse termo.")
             } else {
+                // 3. Exibe a lista filtrada dinamicamente
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(jogos) { jogo ->
+                    items(jogosFiltrados) { jogo ->
                         val eFavorito = listaFavoritosIds.contains(jogo.id)
 
                         JogoCard(
@@ -510,6 +523,7 @@ fun TelaListaJogos(
         }
     }
 }
+
 
 @Composable
 fun BotaoConsultaListaGeral(onClick: () -> Unit) {
