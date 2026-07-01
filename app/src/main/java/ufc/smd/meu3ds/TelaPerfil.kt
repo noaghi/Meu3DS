@@ -340,7 +340,6 @@ fun TelaPerfil(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-// --- CONTAINER COM PESO DINÂMICO PARA EVITAR ERRO DE MEDIÇÃO ---
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -432,7 +431,6 @@ fun TelaPerfil(
         }
     }
 
-// --- DIÁLOGO DE VISUALIZAÇÃO DOS FAVORITOS DO AMIGO ---
     if (amgSelecionadoForJogos != null) {
         AlertDialog(
             onDismissRequest = { amgSelecionadoForJogos = null },

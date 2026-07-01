@@ -1,12 +1,11 @@
 package ufc.smd.meu3ds.data.network
 
-import androidx.compose.runtime.remember
 import okhttp3.RequestBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.POST
-import retrofit2.http.Header
 import retrofit2.http.Body
+import retrofit2.http.Header
+import retrofit2.http.POST
 
 interface IGDBApiService {
     @POST("games")
