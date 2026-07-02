@@ -1,9 +1,6 @@
 # **Meu3DS**
 
-**Equipe**
-Hiago Andrade
-João Lucas
-Mariane Barbosa
+**Equipe:** Hiago Andrade, João Lucas, Mariane Barbosa
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -118,3 +115,10 @@ O suporte linguístico do aplicativo foi projetado centralizando as chaves de tr
 * `res/values-en/strings.xml` — Conterá o mapeamento completo mapeado para o **Inglês (EUA)**.
 
 Os componentes em Jetpack Compose consomem as propriedades de forma desacoplada através do método de escuta dinâmico do contexto da aplicação (`stringResource(id)`), garantindo que o aplicativo adapte instantaneamente todas as mensagens do Firebase, dicas de inputs de busca, diálogos de biometria e rótulos de navegação baseando-se no idioma global configurado nas configurações de sistema do dispositivo móvel do usuário.
+
+---
+
+### **Link para Vídeo Demonstrativo do Aplicativo**
+https://youtu.be/897ARxNKqW8
+
+---
