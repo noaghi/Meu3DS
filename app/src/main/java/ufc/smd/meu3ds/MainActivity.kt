@@ -1,5 +1,6 @@
 package ufc.smd.meu3ds
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -52,11 +53,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -78,7 +81,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : androidx.fragment.app.FragmentActivity() {
+class MainActivity : FragmentActivity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var database: FirebaseDatabase
     private var userLog by mutableStateOf<UserModel?>(null)
@@ -109,7 +112,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     onLoginClick = { email, senha, context, onSuccess ->
                         composeScope.launch {
                             if (email.isBlank() || senha.isBlank()) {
-                                Toast.makeText(this@MainActivity, "Por favor, preencha todos os campos.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@MainActivity, getString(R.string.fill_fields), Toast.LENGTH_SHORT).show()
                                 return@launch
                             }
 
@@ -119,7 +122,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             } else {
                                 Toast.makeText(
                                     this@MainActivity,
-                                    "E-mail ou senha incorretos. Verifique os dados e tente novamente.",
+                                    getString(R.string.wrong_login),
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
@@ -204,10 +207,10 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     Log.d("PDM", "Reset enviado com sucesso para: $email")
-                    Toast.makeText(this, "E-mail de recuperação enviado com sucesso!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.reset_email_sent), Toast.LENGTH_SHORT).show()
                 } else {
                     Log.w("PDM", "Falha ao enviar reset", task.exception)
-                    Toast.makeText(this, "Erro: Não foi possível enviar o e-mail de recuperação.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.reset_email_error), Toast.LENGTH_LONG).show()
                 }
             }
     }
@@ -225,7 +228,7 @@ object Rotas {
 fun AppNavigation(
     isUserLoggedIn: Boolean,
     navController: NavHostController,
-    onLoginClick: (String, String, android.content.Context, () -> Unit) -> Unit,
+    onLoginClick: (String, String, Context, () -> Unit) -> Unit,
     onResetPasswordClick: (String) -> Unit,
     onCadastroClick: (String, String, String, () -> Unit) -> Unit,
     userLog: UserModel?,
@@ -283,7 +286,7 @@ fun AppNavigation(
 @Composable
 fun TelaLogin(
     navController: NavHostController,
-    onLoginClick: (String, String, android.content.Context, () -> Unit) -> Unit,
+    onLoginClick: (String, String, Context, () -> Unit) -> Unit,
     onResetPasswordClick: (String) -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
@@ -308,14 +311,14 @@ fun TelaLogin(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Meu3DS",
+            text = stringResource(R.string.app_title),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.primary
         )
 
         Text(
-            text = "Gerencie sua coleção de jogos favoritos",
+            text = stringResource(R.string.app_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
@@ -324,7 +327,7 @@ fun TelaLogin(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("E-mail") },
+            label = { Text(stringResource(R.string.login_email)) },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
@@ -337,7 +340,7 @@ fun TelaLogin(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Senha") },
+            label = { Text(stringResource(R.string.login_password)) },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Senha") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -355,7 +358,7 @@ fun TelaLogin(
                 enabled = email.isNotBlank()
             ) {
                 Text(
-                    text = "Esqueceu a senha?",
+                    text = stringResource(R.string.password_forgot),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -377,7 +380,7 @@ fun TelaLogin(
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text(text = "Entrar no App", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(text = stringResource(R.string.login_enter), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -387,9 +390,9 @@ fun TelaLogin(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Não tem uma conta? ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = stringResource(R.string.missing_account), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                text = "Cadastre-se",
+                text = stringResource(R.string.create_account),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -407,14 +410,15 @@ fun JogoCard(
 ) {
     var expandido by rememberSaveable { mutableStateOf(false) }
 
-    val dataFormatada = remember(jogo.data) {
+    val noDateText = stringResource(R.string.no_date)
+    val dataFormatada = remember(jogo.data, noDateText) {
         if (jogo.data != null) {
             val ms = jogo.data * 1000
             val data = Date(ms)
             val formatador = SimpleDateFormat("dd/MM/yyyy", Locale.forLanguageTag("pt-BR"))
             formatador.format(data)
         } else {
-            "Sem data de lançamento"
+            noDateText
         }
     }
 
@@ -442,7 +446,7 @@ fun JogoCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = jogo.nome ?: "Sem título",
+                    text = jogo.nome ?: stringResource(R.string.no_title),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
@@ -468,7 +472,7 @@ fun JogoCard(
                 if (expandido) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = jogo.desc ?: "Sem descrição disponível.",
+                        text = jogo.desc ?: stringResource(R.string.no_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 20.sp
@@ -489,7 +493,7 @@ fun JogoCard(
                 IconButton(onClick = onFavoritoClick) {
                     Icon(
                         imageVector = if (isFavorito) Icons.Default.Star else Icons.Default.StarBorder,
-                        contentDescription = "Favoritar",
+                        contentDescription = stringResource(R.string.favorite),
                         tint = if (isFavorito) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(26.dp)
@@ -519,14 +523,14 @@ fun TelaCadastroUsuario(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Criar Conta",
+            text = stringResource(R.string.create_account_title),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.primary
         )
 
         Text(
-            text = "Preencha os dados abaixo para começar",
+            text = stringResource(R.string.create_account_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
@@ -535,7 +539,7 @@ fun TelaCadastroUsuario(
         OutlinedTextField(
             value = nome,
             onValueChange = { nome = it },
-            label = { Text("Nome Completo") },
+            label = { Text(stringResource(R.string.account_name)) },
             leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Nome") },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
@@ -547,7 +551,7 @@ fun TelaCadastroUsuario(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("E-mail") },
+            label = { Text(stringResource(R.string.account_email)) },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
@@ -560,7 +564,7 @@ fun TelaCadastroUsuario(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Senha") },
+            label = { Text(stringResource(R.string.account_password)) },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Senha") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -587,7 +591,7 @@ fun TelaCadastroUsuario(
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text(text = "Finalizar Cadastro", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(text = stringResource(R.string.finish_account), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -597,9 +601,9 @@ fun TelaCadastroUsuario(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Já possui uma conta? ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = stringResource(R.string.having_account), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                text = "Faça Login",
+                text = stringResource(R.string.login),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

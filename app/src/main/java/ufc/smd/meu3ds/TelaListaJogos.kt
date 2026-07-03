@@ -43,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.database.FirebaseDatabase
@@ -148,14 +149,14 @@ fun TelaListaJogos(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Meu3DS", fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.app_title), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
                 },
                 actions = {
                     IconButton(onClick = onPerfilClick) {
-                        Icon(Icons.Default.Person, contentDescription = "Ver Perfil", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Person, contentDescription = stringResource(R.string.see_profile), tint = MaterialTheme.colorScheme.primary)
                     }
                     IconButton(onClick = onLogoutClick) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Sair", tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Default.ExitToApp, contentDescription = stringResource(R.string.logout), tint = MaterialTheme.colorScheme.error)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -179,13 +180,13 @@ fun TelaListaJogos(
                 Tab(
                     selected = abaSelecionada == 0,
                     onClick = { abaSelecionada = 0 },
-                    text = { Text("Todos os Jogos", fontWeight = FontWeight.Bold) },
+                    text = { Text(stringResource(R.string.games_section), fontWeight = FontWeight.Bold) },
                     icon = { Icon(Icons.Default.Gamepad, contentDescription = null) }
                 )
                 Tab(
                     selected = abaSelecionada == 1,
                     onClick = { abaSelecionada = 1 },
-                    text = { Text("Meus Favoritos", fontWeight = FontWeight.Bold) },
+                    text = { Text(stringResource(R.string.favorite_section), fontWeight = FontWeight.Bold) },
                     icon = { Icon(Icons.Default.Star, contentDescription = null) }
                 )
             }
@@ -199,13 +200,13 @@ fun TelaListaJogos(
                     value = textoBusca,
                     onValueChange = { textoBusca = it },
                     placeholder = {
-                        Text(if (abaSelecionada == 0) "Buscar em todo o catálogo..." else "Buscar nos meus favoritos...")
+                        Text(if (abaSelecionada == 0) stringResource(R.string.search_general) else stringResource(R.string.search_favorite))
                     },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search)) },
                     trailingIcon = {
                         if (textoBusca.isNotEmpty()) {
                             IconButton(onClick = { textoBusca = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Limpar")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                             }
                         }
                     },
@@ -223,7 +224,7 @@ fun TelaListaJogos(
                                 CircularProgressIndicator()
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Buscando jogos no servidor...",
+                                    text = stringResource(R.string.search_games),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -235,8 +236,8 @@ fun TelaListaJogos(
                         ) {
                             Text(
                                 text = if (abaSelecionada == 1 && textoBusca.isBlank())
-                                    "Você ainda não favoritou nenhum jogo."
-                                else "Nenhum jogo encontrado.",
+                                    stringResource(R.string.not_favorited)
+                                else stringResource(R.string.game_not_found),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -277,11 +278,11 @@ fun TelaListaJogos(
                             onClick = { if (paginaAtual > 1) paginaAtual-- },
                             enabled = paginaAtual > 1 && !carregando
                         ) {
-                            Text("Anterior", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.previous), fontWeight = FontWeight.Bold)
                         }
 
                         Text(
-                            text = "Página $paginaAtual",
+                            text = stringResource(R.string.page)+" $paginaAtual",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -291,7 +292,7 @@ fun TelaListaJogos(
                             onClick = { if (temMaisJogos) paginaAtual++ },
                             enabled = temMaisJogos && !carregando
                         ) {
-                            Text("Próxima", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.next), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

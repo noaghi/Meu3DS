@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.database.DataSnapshot
@@ -78,6 +79,15 @@ fun TelaPerfil(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Pre-fetching strings to avoid using context.getString inside callbacks/lambdas
+    val noNameText = stringResource(R.string.no_name)
+    val biometricAllowedText = stringResource(R.string.biometric_allowed)
+    val biometricFailedText = stringResource(R.string.biometric_failed)
+    val dataSaveSuccessText = stringResource(R.string.data_save_success)
+    val dataSaveFailedText = stringResource(R.string.data_save_failed)
+    val friendRemoveText = stringResource(R.string.friend_remove)
+    val friendRemoveFailedText = stringResource(R.string.friend_remove_failed)
+
     var amgSelecionadoForJogos by remember { mutableStateOf<UserModel?>(null) }
     var jogosDoAmigo by remember { mutableStateOf(listOf<JogoModel>()) }
 
@@ -96,7 +106,7 @@ fun TelaPerfil(
                             amigos.add(
                                 UserModel(
                                     uid = amigoSnapshot.key,
-                                    name = amigoSnapshot.child("name").value?.toString() ?: "Sem nome",
+                                    name = amigoSnapshot.child("name").value?.toString() ?: noNameText,
                                     email = amigoSnapshot.child("email").value?.toString() ?: ""
                                 )
                             )
@@ -143,10 +153,10 @@ fun TelaPerfil(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Meu Perfil", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.profile_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     TextButton(onClick = onVoltarClick) {
-                        Text("Voltar", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.back), fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -187,7 +197,7 @@ fun TelaPerfil(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Dados Cadastrais",
+                            text = stringResource(R.string.profile_data),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -199,7 +209,7 @@ fun TelaPerfil(
                     OutlinedTextField(
                         value = nomeEditado,
                         onValueChange = { nomeEditado = it },
-                        label = { Text("Nome Completo") },
+                        label = { Text(stringResource(R.string.account_name)) },
                         enabled = modoEdicaoLiberado,
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -210,7 +220,7 @@ fun TelaPerfil(
                     OutlinedTextField(
                         value = emailEditado,
                         onValueChange = { emailEditado = it },
-                        label = { Text("E-mail") },
+                        label = { Text(stringResource(R.string.account_email)) },
                         enabled = modoEdicaoLiberado,
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -226,12 +236,12 @@ fun TelaPerfil(
                                     onSucesso = {
                                         modoEdicaoLiberado = true
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Identidade confirmada! Edição liberada.")
+                                            snackbarHostState.showSnackbar(biometricAllowedText)
                                         }
                                     },
                                     onErro = { erro ->
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Falha na segurança: $erro")
+                                            snackbarHostState.showSnackbar("$biometricFailedText $erro")
                                         }
                                     }
                                 )
@@ -247,11 +257,11 @@ fun TelaPerfil(
                                             if (task.isSuccessful) {
                                                 modoEdicaoLiberado = false
                                                 coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar("Dados salvos com sucesso!")
+                                                    snackbarHostState.showSnackbar(dataSaveSuccessText)
                                                 }
                                             } else {
                                                 coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar("Erro ao salvar no banco de dados.")
+                                                    snackbarHostState.showSnackbar(dataSaveFailedText)
                                                 }
                                             }
                                         }
@@ -262,7 +272,7 @@ fun TelaPerfil(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = if (modoEdicaoLiberado) "Salvar Alterações" else "Liberar Edição com Biometria",
+                            text = if (modoEdicaoLiberado) stringResource(R.string.save_modifiers) else stringResource(R.string.biometric),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -272,7 +282,7 @@ fun TelaPerfil(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Adicionar novo amigo",
+                text = stringResource(R.string.add_friend),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -288,7 +298,7 @@ fun TelaPerfil(
                 OutlinedTextField(
                     value = emailBusca,
                     onValueChange = { emailBusca = it },
-                    label = { Text("E-mail do seu amigo") },
+                    label = { Text(stringResource(R.string.friend_account)) },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
@@ -321,7 +331,7 @@ fun TelaPerfil(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text("Adicionar", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.confirm_friend), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -331,7 +341,7 @@ fun TelaPerfil(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Meus Amigos (${listaAmigos.size})",
+                text = stringResource(R.string.friends)+" (${listaAmigos.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -352,7 +362,7 @@ fun TelaPerfil(
                 } else if (listaAmigos.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Nenhum amigo adicionado ainda.",
+                            text = stringResource(R.string.no_friends),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -407,10 +417,10 @@ fun TelaPerfil(
                                                         amigo.uid
                                                     )
                                                     if (sucesso) {
-                                                        snackbarHostState.showSnackbar("Amigo removido.")
+                                                        snackbarHostState.showSnackbar(friendRemoveText)
                                                         atualizarListaAmigos()
                                                     } else {
-                                                        snackbarHostState.showSnackbar("Erro ao remover amigo.")
+                                                        snackbarHostState.showSnackbar(friendRemoveFailedText)
                                                     }
                                                 }
                                             }
@@ -418,7 +428,7 @@ fun TelaPerfil(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
-                                            contentDescription = "Remover",
+                                            contentDescription = stringResource(R.string.remove),
                                             tint = MaterialTheme.colorScheme.error
                                         )
                                     }
@@ -436,19 +446,19 @@ fun TelaPerfil(
             onDismissRequest = { amgSelecionadoForJogos = null },
             title = {
                 Text(
-                    text = "Favoritos de ${amgSelecionadoForJogos?.name}",
+                    text = stringResource(R.string.friend_favorites)+" ${amgSelecionadoForJogos?.name}",
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 if (jogosDoAmigo.isEmpty()) {
-                    Text("Este amigo ainda não favoritou nenhum jogo.")
+                    Text(stringResource(R.string.friend_not_favorited))
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
                         items(jogosDoAmigo) { jogo ->
                             Column(modifier = Modifier.padding(vertical = 6.dp)) {
                                 Text(
-                                    text = jogo.nome ?: "Sem título",
+                                    text = jogo.nome ?: stringResource(R.string.no_title),
                                     fontWeight = FontWeight.SemiBold,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
@@ -463,7 +473,7 @@ fun TelaPerfil(
             },
             confirmButton = {
                 TextButton(onClick = { amgSelecionadoForJogos = null }) {
-                    Text("Fechar", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.close), fontWeight = FontWeight.Bold)
                 }
             }
         )
