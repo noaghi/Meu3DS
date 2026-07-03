@@ -118,8 +118,9 @@ Toda a construção visual no Jetpack Compose consome exclusivamente referência
 
 ---
 
-### **Link para Vídeos Demonstrativos do Aplicativo**
-https://youtu.be/897ARxNKqW8
+### **Links para Vídeos Demonstrativos do Aplicativo**
 
-https://youtube.com/shorts/jls5v0MmXZs
+*   [Vídeo Completo de Demonstração](https://youtu.be/897ARxNKqW8)
+*   [Demonstração Rápida em inglês](https://youtube.com/shorts/jls5v0MmXZs)
+
 ---
