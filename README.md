@@ -63,18 +63,32 @@ O gerenciador (`BiometricManager`) verifica se o dispositivo do usuário possui 
 
 ---
 
-## Melhorias de Acessibilidade e Usabilidade (Accessibility Scanner)
+## Relatório de Acessibilidade (Accessibility Scanner)
 
-A interface do **Meu3DS** foi projetada visando os mais rigorosos padrões inclusivos de usabilidade ditados pela WCAG e validados via ferramentas de diagnóstico automático.
+Como parte do compromisso de engenharia de software e design inclusivo do curso de SMD, o aplicativo passou por uma auditoria automatizada completa utilizando a ferramenta **Accessibility Scanner**. Os testes identificaram melhorias necessárias na interface, cujas **correções encontram-se pendentes** de implementação futura:
 
-### **Comparativo de Validação**
+### ⚠️ Apontamentos Identificados (Ajustes Pendentes)
 
-| Critério de Acessibilidade | Estado da Interface Implementada | Resultado do Scanner de Diagnóstico |
-| :--- | :--- | :--- |
-| **Contraste de Texto** | Emprego restrito dos esquemas de cores do **Material Design 3** (`MaterialTheme.colorScheme`), garantindo taxas superiores a 4.5:1 tanto para elementos de primeiro plano quanto para cores de superfície. | **Nenhuma sugestão** (Aprovado com sucesso em conformidade com as diretrizes de legibilidade para textos pequenos e descrições). |
-| **Alvos de Toque (Touch Targets)** | Todos os elementos acionáveis, como os botões de paginação, navegação de abas e ícones utilitários (`IconButton`), possuem áreas de clique configuradas estritamente com tamanhos mínimos de **48.dp x 48.dp**. | **Nenhuma sugestão** (Mitigação total de problemas relacionados a cliques acidentais e erros de digitação). |
-| **Rótulos de Acessibilidade** | Elementos puramente visuais possuem descrição nula para evitar redundâncias em leitores de tela. Ícones funcionais e com estados variáveis (como a Estrela de Favorito e o botão de exclusão) possuem propriedades de acessibilidade dinâmicas (`contentDescription = "Favoritar"`, `"Remover"`, `"Sair"`). | **Nenhuma sugestão** (Todos os rótulos de acessibilidade do aplicativo incluem com fidelidade o texto visível e o estado atual do componente). |
-| **Estrutura Tipográfica** | Utilização de escalas tipográficas organizadas hierarquicamente com pesos de fontes bem delimitados (`FontWeight.ExtraBold`, `FontWeight.Bold`, `FontWeight.SemiBold`). | **Nenhuma sugestão** (A ancoragem visual permite a rápida varredura e leitura confortável de sinopses e títulos longos). |
+1.  **Taxas de Contraste Insuficientes (Texto/Fundo):**
+    *   **Tela de Cadastro:** O botão de envio apresentou uma taxa de contraste estimada em **2,50** (Texto `#63646C` sobre fundo `#27282E`), abaixo do mínimo exigido de 4,50 para textos pequenos. *Ajuste planejado: Mudar o background para `#efeafb` ou clarear a tipografia.*
+    *   **Tela de Login:** O link *"Esqueceu a senha"* apresentou contraste de **2,58** (Texto `#56575E` sobre fundo `#121318`), dificultando a leitura.
+    *   **Tela de Perfil:** Os rótulos de dados cadastrais e o botão *"Adicionar"* apresentaram taxas de **3,04** e **2,50** respectivamente, necessitando de substituição por tons mais legíveis como `#d9d9d9`.
+2.  **Redundância e Descrição de Itens:**
+    *   **Botão Favoritar (Cards de Jogos):** O scanner apontou que o texto falado clicável *"Favoritar"* é idêntico em múltiplos itens da lista (detectado em 7 a 9 itens simultâneos). Para leitores de tela (TalkBack), isso gera ambiguidade. *Ajuste planejado: Concatenar dinamicamente o nome do respectivo jogo à descrição de acessibilidade do botão.*
+3.  **Rótulos Indisponíveis e Textos Ocultos:**
+    *   Determinados elementos estruturais geraram alertas de que o rótulo pode não ser interpretado corretamente por leitores de tela. Além disso, em elementos dinâmicos do catálogo (como os textos longos extraídos da API), há risco de o rótulo de acessibilidade divergir do texto visível na tela.
+
+---
+
+## Suporte Internacional (Inglês e Português)
+
+O aplicativo conta com suporte completo a dois idiomas por meio dos mecanismos nativos de internacionalização (i18n) do ecossistema Android. O isolamento rígido de strings permite que o sistema alterne de forma fluida a linguagem gráfica inteira com base na preferência global do dispositivo.
+
+### Estrutura de Recursos Utilizada
+*   **`app/src/main/res/values/strings.xml`:** Atua como o arquivo de recursos padrão do sistema (fallback).
+*   **`app/src/main/res/values-en/strings.xml`:** Contém as chaves localizadas e traduzidas especificamente para o idioma Inglês.
+
+Toda a construção visual no Jetpack Compose consome exclusivamente referências dinâmicas via método `stringResource(R.string.[id_da_chave])`. Isso erradica por completo a presença de textos travados (*hardcoded strings*) dentro dos códigos fontes em Kotlin, garantindo a modularidade técnica exigida para a internacionalização do ecossistema móvel.
 
 ---
 
@@ -104,21 +118,7 @@ A interface do **Meu3DS** foi projetada visando os mais rigorosos padrões inclu
 
 ---
 
-## Próximos Passos & Internacionalização (i18n)
-
-Para a entrega final da homologação do ecossistema, os seguintes módulos encontram-se em fila de desenvolvimento:
-1.  **Internacionalização (PT-BR / EN-US):** Migração das strings estáticas de validação e rotulagem das telas para arquivos de recursos isolados (`strings.xml`), habilitando a tradução dinâmica com base no idioma do sistema operacional do smartphone.
-2.  **Módulo Cross-Platform:** Conclusão do cliente espelho utilizando framework multiplataforma compartilhando as mesmas regras de negócio e consumo de endpoints centralizados neste repositório.
-
-O suporte linguístico do aplicativo foi projetado centralizando as chaves de tradução nos dicionários de recursos de strings do Android XML nativo:
-* `res/values/strings.xml` — Conterá as strings padrão em **Português (Brasil)**.
-* `res/values-en/strings.xml` — Conterá o mapeamento completo mapeado para o **Inglês (EUA)**.
-
-Os componentes em Jetpack Compose consomem as propriedades de forma desacoplada através do método de escuta dinâmico do contexto da aplicação (`stringResource(id)`), garantindo que o aplicativo adapte instantaneamente todas as mensagens do Firebase, dicas de inputs de busca, diálogos de biometria e rótulos de navegação baseando-se no idioma global configurado nas configurações de sistema do dispositivo móvel do usuário.
-
----
-
 ### **Link para Vídeo Demonstrativo do Aplicativo**
 https://youtu.be/897ARxNKqW8
-
+https://youtube.com/shorts/jls5v0MmXZs
 ---
