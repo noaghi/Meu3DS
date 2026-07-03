@@ -67,7 +67,7 @@ O gerenciador (`BiometricManager`) verifica se o dispositivo do usuário possui 
 
 Como parte do compromisso de engenharia de software e design inclusivo do curso de SMD, o aplicativo passou por uma auditoria automatizada completa utilizando a ferramenta **Accessibility Scanner**. Os testes identificaram melhorias necessárias na interface, cujas **correções encontram-se pendentes** de implementação futura:
 
-### ⚠️ Apontamentos Identificados (Ajustes Pendentes)
+### Apontamentos Identificados (Ajustes Pendentes)
 
 1.  **Taxas de Contraste Insuficientes (Texto/Fundo):**
     *   **Tela de Cadastro:** O botão de envio apresentou uma taxa de contraste estimada em **2,50** (Texto `#63646C` sobre fundo `#27282E`), abaixo do mínimo exigido de 4,50 para textos pequenos. *Ajuste planejado: Mudar o background para `#efeafb` ou clarear a tipografia.*
